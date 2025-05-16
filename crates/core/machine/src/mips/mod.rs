@@ -1,19 +1,18 @@
-use core::fmt;
-use itertools::Itertools;
-use zkm_core_executor::{
-    events::PrecompileLocalMemory, syscalls::SyscallCode, ExecutionRecord, MipsAirId, Program,
-};
-
 use crate::{
     global::GlobalChip,
     memory::{MemoryChipType, MemoryLocalChip, NUM_LOCAL_MEMORY_ENTRIES_PER_ROW},
     syscall::precompiles::fptower::{Fp2AddSubAssignChip, Fp2MulAssignChip, FpOpChip},
 };
+use core::fmt;
 use hashbrown::{HashMap, HashSet};
+use itertools::Itertools;
 pub use mips_chips::*;
 use p3_field::PrimeField32;
 use strum_macros::{EnumDiscriminants, EnumIter};
 use zkm_core_executor::events::PrecompileEvent;
+use zkm_core_executor::{
+    events::PrecompileLocalMemory, syscalls::SyscallCode, ExecutionRecord, MipsAirId, Program,
+};
 use zkm_curves::weierstrass::{bls12_381::Bls12381BaseField, bn254::Bn254BaseField};
 use zkm_stark::{
     air::{LookupScope, MachineAir, ZKM_PROOF_NUM_PV_ELTS},
@@ -63,6 +62,8 @@ pub const MAX_LOG_NUMBER_OF_SHARDS: usize = 16;
 
 /// The maximum number of shards in core.
 pub const MAX_NUMBER_OF_SHARDS: usize = 1 << MAX_LOG_NUMBER_OF_SHARDS;
+
+const KECCAK_ROWS_PER_BLOCK: usize = 24;
 
 /// An AIR for encoding MIPS execution.
 ///
@@ -465,20 +466,7 @@ impl<F: PrimeField32> MipsAir<F> {
             .get_events(self.syscall_code())
             .filter(|events| !events.is_empty())
             .map(|events| {
-                let mut num_rows = events.len() * self.rows_per_event();
-                if self.syscall_code() == SyscallCode::KECCAK_SPONGE {
-                    num_rows = events
-                        .iter()
-                        .map(|(_, pre_e)| {
-                            if let PrecompileEvent::KeccakSponge(event) = pre_e {
-                                event.num_blocks() * 24
-                            } else {
-                                unreachable!()
-                            }
-                        })
-                        .sum::<usize>();
-                }
-
+                let num_rows = events.len() * self.rows_per_event(Some(record));
                 (
                     num_rows,
                     events.get_local_mem_events().into_iter().count(),
@@ -563,12 +551,55 @@ impl<F: PrimeField32> MipsAir<F> {
             .collect()
     }
 
-    pub(crate) fn rows_per_event(&self) -> usize {
+    pub(crate) fn rows_per_event(&self, record: Option<&ExecutionRecord>) -> usize {
         match self {
             Self::Sha256Compress(_) => 80,
             Self::Sha256Extend(_) => 48,
+            Self::KeccakSponge(_) => {
+                if let Some(record) = record {
+                    self.keccak_rows_per_event(record)
+                } else {
+                    0
+                }
+            }
             _ => 1,
         }
+    }
+
+    fn keccak_rows_per_event(&self, record: &ExecutionRecord) -> usize {
+        let all = self.keccak_rows_per_record(record);
+        if all == 0 {
+            return 0;
+        }
+
+        let count = record
+            .precompile_events
+            .get_events(SyscallCode::KECCAK_SPONGE)
+            .map(|events| events.len())
+            .unwrap_or(0);
+        if count > 0 {
+            return all.div_ceil(count);
+        }
+        0
+    }
+
+    fn keccak_rows_per_record(&self, record: &ExecutionRecord) -> usize {
+        record
+            .precompile_events
+            .get_events(SyscallCode::KECCAK_SPONGE)
+            .map(|events| {
+                events
+                    .iter()
+                    .map(|(_, pre_e)| {
+                        if let PrecompileEvent::KeccakSponge(event) = pre_e {
+                            event.num_blocks() * KECCAK_ROWS_PER_BLOCK
+                        } else {
+                            unreachable!()
+                        }
+                    })
+                    .sum::<usize>()
+            })
+            .unwrap_or(0)
     }
 
     pub(crate) fn syscall_code(&self) -> SyscallCode {
@@ -663,7 +694,7 @@ pub mod tests {
     use zkm_core_executor::{
         programs::tests::{
             fibonacci_program, hello_world_program, sha3_chain_program, simple_memory_program,
-            simple_program, ssz_withdrawals_program,
+            simple_program, ssz_withdrawals_program, unconstrained_program,
         },
         Instruction, MipsAirId, Opcode, Program,
     };
@@ -687,15 +718,14 @@ pub mod tests {
         let costs: HashMap<String, u64> = serde_json::from_reader(file).unwrap();
         // Compare with costs computed by machine
         let machine_costs = MipsAir::<KoalaBear>::costs();
-        log::info!("{:?}", machine_costs);
+        log::info!("{machine_costs:?}");
         assert_eq!(costs, machine_costs);
     }
 
     #[test]
-    #[ignore]
     fn write_core_air_costs() {
         let costs = MipsAir::<KoalaBear>::costs();
-        println!("{:?}", costs);
+        println!("{costs:?}");
         // write to file
         // Create directory if it doesn't exist
         let dir = std::path::Path::new("../executor/src/artifacts");
@@ -836,7 +866,7 @@ pub mod tests {
     #[test]
     fn test_mul_prove() {
         utils::setup_logger();
-        let mul_ops = [Opcode::MUL, Opcode::MULT, Opcode::MULTU];
+        let mul_ops = [Opcode::MUL];
         let operands =
             [(1, 1), (1234, 5678), (8765, 4321), (0xffff, 0xffff - 1), (u32::MAX - 1, u32::MAX)];
         for mul_op in mul_ops.iter() {
@@ -845,6 +875,25 @@ pub mod tests {
                     Instruction::new(Opcode::ADD, 29, 0, operand.0, false, true),
                     Instruction::new(Opcode::ADD, 30, 0, operand.1, false, true),
                     Instruction::new(*mul_op, 31, 30, 29, false, false),
+                ];
+                let program = Program::new(instructions, 0, 0);
+                run_test::<CpuProver<_, _>>(program).unwrap();
+            }
+        }
+    }
+
+    #[test]
+    fn test_mult_prove() {
+        utils::setup_logger();
+        let mul_ops = [Opcode::MULT, Opcode::MULTU];
+        let operands =
+            [(1, 1), (1234, 5678), (8765, 4321), (0xffff, 0xffff - 1), (u32::MAX - 1, u32::MAX)];
+        for mul_op in mul_ops.iter() {
+            for operand in operands.iter() {
+                let instructions = vec![
+                    Instruction::new(Opcode::ADD, 29, 0, operand.0, false, true),
+                    Instruction::new(Opcode::ADD, 30, 0, operand.1, false, true),
+                    Instruction::new(*mul_op, 32, 30, 29, false, false),
                 ];
                 let program = Program::new(instructions, 0, 0);
                 run_test::<CpuProver<_, _>>(program).unwrap();
@@ -899,7 +948,7 @@ pub mod tests {
                 let instructions = vec![
                     Instruction::new(Opcode::ADD, 29, 0, op.0, false, true),
                     Instruction::new(Opcode::ADD, 30, 0, op.1, false, true),
-                    Instruction::new(*div_rem_op, 31, 29, 30, false, false),
+                    Instruction::new(*div_rem_op, 32, 29, 30, false, false),
                 ];
                 let program = Program::new(instructions, 0, 0);
                 run_test::<CpuProver<_, _>>(program).unwrap();
@@ -1067,6 +1116,13 @@ pub mod tests {
     fn test_ssz_withdrawal() {
         setup_logger();
         let program = ssz_withdrawals_program();
+        run_test::<CpuProver<_, _>>(program).unwrap();
+    }
+
+    #[test]
+    fn test_unconstrained() {
+        setup_logger();
+        let program = unconstrained_program();
         run_test::<CpuProver<_, _>>(program).unwrap();
     }
 

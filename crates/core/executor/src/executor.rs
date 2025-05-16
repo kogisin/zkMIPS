@@ -1029,7 +1029,7 @@ impl<'a> Executor<'a> {
         let mut next_pc = self.state.next_pc;
         let mut next_next_pc = self.state.next_pc.wrapping_add(4);
 
-        let (a, b, c): (u32, u32, u32);
+        let (a, mut b, mut c): (u32, u32, u32);
         let mut hi = None;
         let mut syscall_code = 0u32;
 
@@ -1061,8 +1061,13 @@ impl<'a> Executor<'a> {
                     self.local_counts.event_counts[Opcode::ADD] += 1;
                     self.local_counts.event_counts[Opcode::SLT] += 2;
                 }
-                Opcode::DIVU | Opcode::DIV => {
-                    self.local_counts.event_counts[Opcode::MUL] += 2;
+                Opcode::DIV => {
+                    self.local_counts.event_counts[Opcode::MULT] += 2;
+                    self.local_counts.event_counts[Opcode::ADD] += 2;
+                    self.local_counts.event_counts[Opcode::SLTU] += 1;
+                }
+                Opcode::DIVU => {
+                    self.local_counts.event_counts[Opcode::MULTU] += 2;
                     self.local_counts.event_counts[Opcode::ADD] += 2;
                     self.local_counts.event_counts[Opcode::SLTU] += 1;
                 }
@@ -1070,7 +1075,7 @@ impl<'a> Executor<'a> {
                     self.local_counts.event_counts[Opcode::SRL] += 1;
                 }
                 Opcode::MADDU | Opcode::MSUBU => {
-                    self.local_counts.event_counts[Opcode::MULT] += 1;
+                    self.local_counts.event_counts[Opcode::MULTU] += 1;
                 }
                 Opcode::EXT => {
                     self.local_counts.event_counts[Opcode::SLL] += 1;
@@ -1150,12 +1155,21 @@ impl<'a> Executor<'a> {
                     self.state.exited = true;
                 }
 
+                // If the syscall is `EXIT_UNCONSTRAINED`, the memory was restored to pre-unconstrained code
+                // in the execute function, so we need to re-read from A0 and A1.  Just do a peek on the
+                // registers.
+                if syscall == SyscallCode::EXIT_UNCONSTRAINED {
+                    b = self.register(Register::A0);
+                    c = self.register(Register::A1);
+                }
+
                 // Allow the syscall impl to modify state.clk/pc (exit unconstrained does this)
                 clk = self.state.clk;
                 pc = self.state.pc;
 
                 self.rw(Register::V0, a, MemoryAccessPosition::A);
                 next_pc = precompile_next_pc;
+                next_next_pc = precompile_next_pc + 4;
                 self.state.clk += precompile_cycles;
                 exit_code = returned_exit_code;
             }

@@ -4,10 +4,7 @@ use crate::{Executor, Register};
 
 use super::{Syscall, SyscallCode, SyscallContext};
 
-pub const FD_STDOUT: u32 = 1;
-pub const FD_STDERR: u32 = 2;
-pub const FD_PUBLIC_VALUE: u32 = 3;
-pub const FD_READ_HINT: u32 = 4;
+pub use zkm_primitives::consts::fd::*;
 
 pub(crate) struct WriteSyscall;
 
@@ -35,7 +32,7 @@ impl Syscall for WriteSyscall {
                     // If the string does not match any known command, print it to stdout.
                     let flush_s = update_io_buf(ctx, fd, s);
                     if !flush_s.is_empty() {
-                        flush_s.into_iter().for_each(|line| println!("stdout: {}", line));
+                        flush_s.into_iter().for_each(|line| println!("stdout: {line}"));
                     }
                 }
             }
@@ -43,11 +40,11 @@ impl Syscall for WriteSyscall {
             let s = core::str::from_utf8(slice).unwrap();
             let flush_s = update_io_buf(ctx, fd, s);
             if !flush_s.is_empty() {
-                flush_s.into_iter().for_each(|line| println!("stderr: {}", line));
+                flush_s.into_iter().for_each(|line| println!("stderr: {line}"));
             }
-        } else if fd == FD_PUBLIC_VALUE {
+        } else if fd == FD_PUBLIC_VALUES {
             rt.state.public_values_stream.extend_from_slice(slice);
-        } else if fd == FD_READ_HINT {
+        } else if fd == FD_HINT {
             rt.state.input_stream.push(slice.to_vec());
         } else if let Some(mut hook) = rt.hook_registry.get(fd) {
             let res = hook.invoke_hook(rt.hook_env(), slice);
@@ -113,7 +110,7 @@ fn start_cycle_tracker(rt: &mut Executor, name: &str) {
     let depth = rt.cycle_tracker.len() as u32;
     rt.cycle_tracker.insert(name.to_string(), (rt.state.global_clk, depth));
     let padding = "│ ".repeat(depth as usize);
-    log::info!("{}┌╴{}", padding, name);
+    log::info!("{padding}┌╴{name}");
 }
 
 /// End tracking cycles for the given name, print out the log, and return the total number of cycles
