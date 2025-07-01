@@ -92,14 +92,12 @@ impl BranchChip {
         cols.op_a_value = event.a.into();
         cols.op_b_value = event.b.into();
         cols.op_c_value = event.c.into();
-        cols.op_a_0 = F::from_bool(event.op_a_0);
 
         let a_eq_b = event.a == event.b;
 
         let a_lt_b = (event.a as i32) < (event.b as i32);
         let a_gt_b = (event.a as i32) > (event.b as i32);
 
-        cols.a_eq_b = F::from_bool(a_eq_b);
         cols.a_lt_b = F::from_bool(a_lt_b);
         cols.a_gt_b = F::from_bool(a_gt_b);
 
@@ -118,13 +116,8 @@ impl BranchChip {
         cols.target_pc = Word::from(target_pc);
         cols.next_next_pc = Word::from(event.next_next_pc);
         cols.next_pc_range_checker.populate(event.next_pc);
-        cols.target_pc_range_checker.populate(target_pc);
         cols.next_next_pc_range_checker.populate(event.next_next_pc);
 
-        if branching {
-            cols.is_branching = F::ONE;
-        } else {
-            cols.not_branching = F::ONE;
-        }
+        cols.is_branching = F::from_bool(branching);
     }
 }

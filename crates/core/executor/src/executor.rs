@@ -19,9 +19,9 @@ use crate::{
     },
     estimate_mips_event_counts, estimate_mips_lde_size,
     events::{
-        AluEvent, BranchEvent, CpuEvent, JumpEvent, MemInstrEvent, MemoryAccessPosition,
-        MemoryInitializeFinalizeEvent, MemoryLocalEvent, MemoryReadRecord, MemoryRecord,
-        MemoryRecordEnum, MemoryWriteRecord, MiscEvent, SyscallEvent,
+        AluEvent, BranchEvent, CompAluEvent, CpuEvent, JumpEvent, MemInstrEvent,
+        MemoryAccessPosition, MemoryInitializeFinalizeEvent, MemoryLocalEvent, MemoryReadRecord,
+        MemoryRecord, MemoryRecordEnum, MemoryWriteRecord, MiscEvent, SyscallEvent,
     },
     hook::{HookEnv, HookRegistry},
     memory::{Entry, PagedMemory},
@@ -679,36 +679,35 @@ impl<'a> Executor<'a> {
         a: u32,
         b: u32,
         c: u32,
-        hi: Option<u32>,
-        op_a_0: bool,
+        hi_or_prev_a: Option<u32>,
         record: MemoryAccessRecord,
         exit_code: u32,
         syscall_code: u32,
     ) {
-        self.emit_cpu(clk, pc, next_pc, next_next_pc, a, b, c, hi, record, exit_code);
+        self.emit_cpu(clk, pc, next_pc, next_next_pc, a, b, c, hi_or_prev_a, record, exit_code);
 
         if instruction.is_alu_instruction() {
-            self.emit_alu_event(instruction.opcode, hi, a, b, c, op_a_0);
+            self.emit_alu_event(clk, instruction.opcode, hi_or_prev_a, a, b, c, record.hi);
         } else if instruction.is_memory_load_instruction()
             || instruction.is_memory_store_instruction()
         {
-            self.emit_mem_instr_event(instruction.opcode, a, b, c, op_a_0);
+            self.emit_mem_instr_event(instruction.opcode, a, b, c);
         } else if instruction.is_branch_instruction() {
-            self.emit_branch_event(instruction.opcode, a, b, c, op_a_0, next_pc, next_next_pc);
+            self.emit_branch_event(instruction.opcode, a, b, c, next_pc, next_next_pc);
         } else if instruction.is_jump_instruction() {
-            self.emit_jump_event(instruction.opcode, a, b, c, op_a_0, next_pc, next_next_pc);
+            self.emit_jump_event(instruction.opcode, a, b, c, next_pc, next_next_pc);
         } else if instruction.is_syscall_instruction() {
-            self.emit_syscall_event(clk, record.a, op_a_0, syscall_code, b, c, next_pc);
+            self.emit_syscall_event(clk, record.a, syscall_code, b, c, next_pc);
         } else if instruction.is_misc_instruction() {
             self.emit_misc_event(
+                clk,
                 instruction.opcode,
+                instruction.op_a,
                 a,
                 b,
                 c,
-                hi.unwrap_or(0),
-                record.a,
+                hi_or_prev_a.unwrap_or(0),
                 record.hi,
-                op_a_0,
             );
         } else {
             log::info!("wrong {}\n", instruction.opcode);
@@ -728,7 +727,7 @@ impl<'a> Executor<'a> {
         a: u32,
         b: u32,
         c: u32,
-        hi: Option<u32>,
+        hi_or_prev_a: Option<u32>,
         record: MemoryAccessRecord,
         exit_code: u32,
     ) {
@@ -743,7 +742,7 @@ impl<'a> Executor<'a> {
             b_record: record.b,
             c,
             c_record: record.c,
-            hi,
+            hi: hi_or_prev_a,
             hi_record: record.hi,
             memory_record: record.memory,
             exit_code,
@@ -751,25 +750,46 @@ impl<'a> Executor<'a> {
     }
 
     /// Emit an ALU event.
+    #[allow(clippy::too_many_arguments)]
     fn emit_alu_event(
         &mut self,
+        clk: u32,
         opcode: Opcode,
-        hi: Option<u32>,
+        hi_or_prev_a: Option<u32>,
         a: u32,
         b: u32,
         c: u32,
-        op_a_0: bool,
+        hi_record: Option<MemoryRecordEnum>,
     ) {
         let event = AluEvent {
             pc: self.state.pc,
             next_pc: self.state.next_pc,
             opcode,
-            hi: hi.unwrap_or(0),
+            hi: hi_or_prev_a.unwrap_or(0),
             a,
             b,
             c,
-            op_a_0,
         };
+
+        let (hi_access, hi_record_is_real) = match hi_record {
+            Some(MemoryRecordEnum::Write(record)) => (record, true),
+            _ => (MemoryWriteRecord::default(), false),
+        };
+
+        let event_comp = CompAluEvent {
+            clk,
+            shard: self.shard(),
+            pc: self.state.pc,
+            next_pc: self.state.next_pc,
+            opcode,
+            hi: hi_or_prev_a.unwrap_or(0),
+            a,
+            b,
+            c,
+            hi_record: hi_access,
+            hi_record_is_real,
+        };
+
         match opcode {
             Opcode::ADD => {
                 self.record.add_events.push(event);
@@ -790,10 +810,10 @@ impl<'a> Executor<'a> {
                 self.record.lt_events.push(event);
             }
             Opcode::MUL | Opcode::MULT | Opcode::MULTU => {
-                self.record.mul_events.push(event);
+                self.record.mul_events.push(event_comp);
             }
-            Opcode::DIV | Opcode::DIVU => {
-                self.record.divrem_events.push(event);
+            Opcode::DIV | Opcode::DIVU | Opcode::MOD | Opcode::MODU => {
+                self.record.divrem_events.push(event_comp);
                 emit_divrem_dependencies(self, event);
             }
             Opcode::CLZ | Opcode::CLO => {
@@ -806,7 +826,7 @@ impl<'a> Executor<'a> {
 
     /// Emit a memory instruction event.
     #[inline]
-    fn emit_mem_instr_event(&mut self, opcode: Opcode, a: u32, b: u32, c: u32, op_a_0: bool) {
+    fn emit_mem_instr_event(&mut self, opcode: Opcode, a: u32, b: u32, c: u32) {
         let event = MemInstrEvent {
             shard: self.shard(),
             clk: self.state.clk,
@@ -816,7 +836,6 @@ impl<'a> Executor<'a> {
             a,
             b,
             c,
-            op_a_0,
             mem_access: self.memory_accesses.memory.expect("Must have memory access"),
             op_a_access: self.memory_accesses.a.expect("Must have memory access"),
         };
@@ -838,12 +857,10 @@ impl<'a> Executor<'a> {
         a: u32,
         b: u32,
         c: u32,
-        op_a_0: bool,
         next_pc: u32,
         next_next_pc: u32,
     ) {
-        let event =
-            BranchEvent { pc: self.state.pc, next_pc, next_next_pc, opcode, a, b, c, op_a_0 };
+        let event = BranchEvent { pc: self.state.pc, next_pc, next_next_pc, opcode, a, b, c };
         self.record.branch_events.push(event);
         emit_branch_dependencies(self, event);
     }
@@ -857,11 +874,10 @@ impl<'a> Executor<'a> {
         a: u32,
         b: u32,
         c: u32,
-        op_a_0: bool,
         next_pc: u32,
         next_next_pc: u32,
     ) {
-        let event = JumpEvent::new(self.state.pc, next_pc, next_next_pc, opcode, a, b, c, op_a_0);
+        let event = JumpEvent::new(self.state.pc, next_pc, next_next_pc, opcode, a, b, c);
         self.record.jump_events.push(event);
         emit_jump_dependencies(self, event);
     }
@@ -871,36 +887,32 @@ impl<'a> Executor<'a> {
     #[allow(clippy::too_many_arguments)]
     fn emit_misc_event(
         &mut self,
+        clk: u32,
         opcode: Opcode,
+        op_a: u8,
         a: u32,
         b: u32,
         c: u32,
-        hi: u32,
-        a_record: Option<MemoryRecordEnum>,
+        prev_a: u32,
         hi_record: Option<MemoryRecordEnum>,
-        op_a_0: bool,
     ) {
-        let a_access = match a_record {
-            Some(MemoryRecordEnum::Write(record)) => record,
-            _ => MemoryWriteRecord::default(),
-        };
-
         let hi_access = match hi_record {
             Some(MemoryRecordEnum::Write(record)) => record,
             _ => MemoryWriteRecord::default(),
         };
 
         let event = MiscEvent::new(
+            clk,
+            self.shard(),
             self.state.pc,
             self.state.next_pc,
             opcode,
+            op_a,
             a,
             b,
             c,
-            hi,
-            a_access,
+            prev_a,
             hi_access,
-            op_a_0,
         );
         self.record.misc_events.push(event);
         emit_misc_dependencies(self, event);
@@ -912,7 +924,6 @@ impl<'a> Executor<'a> {
         &self,
         clk: u32,
         a_record: Option<MemoryRecordEnum>,
-        op_a_0: Option<bool>,
         next_pc: u32,
         syscall_id: u32,
         arg1: u32,
@@ -923,8 +934,6 @@ impl<'a> Executor<'a> {
             _ => (MemoryWriteRecord::default(), false),
         };
 
-        let op_a_0 = op_a_0.unwrap_or(false);
-
         SyscallEvent {
             pc: self.state.pc,
             next_pc,
@@ -932,7 +941,6 @@ impl<'a> Executor<'a> {
             clk,
             a_record: write,
             a_record_is_real: is_real,
-            op_a_0,
             syscall_id,
             arg1,
             arg2,
@@ -944,14 +952,12 @@ impl<'a> Executor<'a> {
         &mut self,
         clk: u32,
         a_record: Option<MemoryRecordEnum>,
-        op_a_0: bool,
         syscall_id: u32,
         arg1: u32,
         arg2: u32,
         next_pc: u32,
     ) {
-        let syscall_event =
-            self.syscall_event(clk, a_record, Some(op_a_0), next_pc, syscall_id, arg1, arg2);
+        let syscall_event = self.syscall_event(clk, a_record, next_pc, syscall_id, arg1, arg2);
 
         self.record.syscall_events.push(syscall_event);
     }
@@ -1030,8 +1036,10 @@ impl<'a> Executor<'a> {
         let mut next_next_pc = self.state.next_pc.wrapping_add(4);
 
         let (a, mut b, mut c): (u32, u32, u32);
-        let mut hi = None;
+        let mut hi_or_prev_a = None;
         let mut syscall_code = 0u32;
+
+        self.state.next_is_delayslot = false;
 
         if self.executor_mode == ExecutorMode::Trace {
             self.memory_accesses = MemoryAccessRecord::default();
@@ -1098,6 +1106,7 @@ impl<'a> Executor<'a> {
                 c = self.rr(Register::A1, MemoryAccessPosition::C);
                 b = self.rr(Register::A0, MemoryAccessPosition::B);
                 let syscall = SyscallCode::from_u32(syscall_id);
+                let mut prev_a = syscall_id;
 
                 if self.print_report && !self.unconstrained {
                     self.report.syscall_counts[syscall] += 1;
@@ -1161,6 +1170,7 @@ impl<'a> Executor<'a> {
                 if syscall == SyscallCode::EXIT_UNCONSTRAINED {
                     b = self.register(Register::A0);
                     c = self.register(Register::A1);
+                    prev_a = self.register(Register::V0);
                 }
 
                 // Allow the syscall impl to modify state.clk/pc (exit unconstrained does this)
@@ -1172,6 +1182,7 @@ impl<'a> Executor<'a> {
                 next_next_pc = precompile_next_pc + 4;
                 self.state.clk += precompile_cycles;
                 exit_code = returned_exit_code;
+                hi_or_prev_a = Some(prev_a);
             }
 
             // Arithmetic instructions
@@ -1193,8 +1204,10 @@ impl<'a> Executor<'a> {
             | Opcode::XOR
             | Opcode::NOR
             | Opcode::CLZ
-            | Opcode::CLO => {
-                (hi, a, b, c) = self.execute_alu(instruction);
+            | Opcode::CLO
+            | Opcode::MOD
+            | Opcode::MODU => {
+                (hi_or_prev_a, a, b, c) = self.execute_alu(instruction);
             }
 
             // Load instructions.
@@ -1222,28 +1235,32 @@ impl<'a> Executor<'a> {
             | Opcode::BGTZ
             | Opcode::BLTZ => {
                 (a, b, c, next_next_pc) = self.execute_branch(instruction, next_pc, next_next_pc);
+                self.state.next_is_delayslot = true;
             }
 
             // Jump instructions.
             Opcode::Jump => {
                 (a, b, c, next_next_pc) = self.execute_jump(instruction);
+                self.state.next_is_delayslot = true;
             }
             Opcode::Jumpi => {
                 (a, b, c, next_next_pc) = self.execute_jumpi(instruction);
+                self.state.next_is_delayslot = true;
             }
             Opcode::JumpDirect => {
                 (a, b, c, next_next_pc) = self.execute_jump_direct(instruction);
+                self.state.next_is_delayslot = true;
             }
 
             // Misc instructions.
             Opcode::MEQ | Opcode::MNE => {
-                (a, b, c) = self.execute_condmov(instruction);
+                (hi_or_prev_a, a, b, c) = self.execute_condmov(instruction);
             }
             Opcode::MADDU => {
-                (hi, a, b, c) = self.execute_maddu(instruction);
+                (hi_or_prev_a, a, b, c) = self.execute_maddu(instruction);
             }
             Opcode::MSUBU => {
-                (hi, a, b, c) = self.execute_msubu(instruction);
+                (hi_or_prev_a, a, b, c) = self.execute_msubu(instruction);
             }
             Opcode::TEQ => {
                 (a, b, c) = self.execute_teq(instruction);
@@ -1258,7 +1275,7 @@ impl<'a> Executor<'a> {
                 (a, b, c) = self.execute_ext(instruction);
             }
             Opcode::INS => {
-                (a, b, c) = self.execute_ins(instruction);
+                (hi_or_prev_a, a, b, c) = self.execute_ins(instruction);
             }
 
             Opcode::UNIMPL => {
@@ -1267,7 +1284,6 @@ impl<'a> Executor<'a> {
             }
         }
 
-        let op_a_0 = instruction.op_a == Register::ZERO as u8;
         // Emit the CPU event for this cycle.
         if self.executor_mode == ExecutorMode::Trace {
             self.emit_events(
@@ -1279,8 +1295,7 @@ impl<'a> Executor<'a> {
                 a,
                 b,
                 c,
-                hi,
-                op_a_0,
+                hi_or_prev_a,
                 self.memory_accesses,
                 exit_code,
                 syscall_code,
@@ -1313,7 +1328,7 @@ impl<'a> Executor<'a> {
         let out_hi = (out >> 32) as u32;
         self.rw(lo, out_lo, MemoryAccessPosition::A);
         self.rw(Register::HI, out_hi, MemoryAccessPosition::HI);
-        (Some(out_hi), out_lo, b, c)
+        (Some(lo_val), out_lo, b, c)
     }
 
     fn execute_msubu(&mut self, instruction: &Instruction) -> (Option<u32>, u32, u32, u32) {
@@ -1333,7 +1348,7 @@ impl<'a> Executor<'a> {
         let out_hi = (out >> 32) as u32;
         self.rw(lo, out_lo, MemoryAccessPosition::A);
         self.rw(Register::HI, out_hi, MemoryAccessPosition::HI);
-        (Some(out_hi), out_lo, b, c)
+        (Some(lo_val), out_lo, b, c)
     }
 
     fn execute_sext(&mut self, instruction: &Instruction) -> (u32, u32, u32) {
@@ -1369,18 +1384,19 @@ impl<'a> Executor<'a> {
         (a, b, c)
     }
 
-    fn execute_ins(&mut self, instruction: &Instruction) -> (u32, u32, u32) {
+    fn execute_ins(&mut self, instruction: &Instruction) -> (Option<u32>, u32, u32, u32) {
         let (rd, rt, c) =
             (instruction.op_a.into(), (instruction.op_b as u8).into(), instruction.op_c);
         let b = self.rr(rt, MemoryAccessPosition::B);
         let a = self.register(rd);
+        let prev_a = a;
         let msb = c >> 5;
         let lsb = c & 0x1f;
         let mask = (1 << (msb - lsb + 1)) - 1;
         let mask_field = mask << lsb;
         let a = (a & !mask_field) | ((b << lsb) & mask_field);
         self.rw(rd, a, MemoryAccessPosition::A);
-        (a, b, c)
+        (Some(prev_a), a, b, c)
     }
 
     fn execute_teq(&mut self, instruction: &Instruction) -> (u32, u32, u32) {
@@ -1395,13 +1411,14 @@ impl<'a> Executor<'a> {
         (src1, src2, 0)
     }
 
-    fn execute_condmov(&mut self, instruction: &Instruction) -> (u32, u32, u32) {
+    fn execute_condmov(&mut self, instruction: &Instruction) -> (Option<u32>, u32, u32, u32) {
         let (rd, rs, rt) = (
             instruction.op_a.into(),
             (instruction.op_b as u8).into(),
             (instruction.op_c as u8).into(),
         );
         let a = self.register(rd);
+        let prev_a = a;
         let c = self.rr(rt, MemoryAccessPosition::C);
         let b = self.rr(rs, MemoryAccessPosition::B);
         let mov = match instruction.opcode {
@@ -1414,7 +1431,7 @@ impl<'a> Executor<'a> {
 
         let a = if mov { b } else { a };
         self.rw(rd, a, MemoryAccessPosition::A);
-        (a, b, c)
+        (Some(prev_a), a, b, c)
     }
 
     fn execute_alu(&mut self, instruction: &Instruction) -> (Option<u32>, u32, u32, u32) {
@@ -1465,6 +1482,8 @@ impl<'a> Executor<'a> {
                 ((b as i32) % (c as i32)) as u32, // hi
             ),
             Opcode::DIVU => (b / c, b % c), //lo,hi
+            Opcode::MOD => (((b as i32) % (c as i32)) as u32, 0),
+            Opcode::MODU => (b % c, 0), //lo,hi
             Opcode::AND => (b & c, 0),
             Opcode::OR => (b | c, 0),
             Opcode::XOR => (b ^ c, 0),
@@ -1683,7 +1702,8 @@ impl<'a> Executor<'a> {
         // Increment the clock.
         self.state.global_clk += 1;
 
-        if !self.unconstrained {
+        // We restrict the execution of branch/jump and its delay slot to be in the same shard.
+        if !self.unconstrained && !self.state.next_is_delayslot {
             // If there's not enough cycles left for another instruction, move to the next shard.
             let cpu_exit = self.max_syscall_cycles + self.state.clk >= self.shard_size;
             // println!("cpu exit {cpu_exit}, {} {}, {}", self.max_syscall_cycles, self.state.clk, self.shard_size);
@@ -1692,7 +1712,7 @@ impl<'a> Executor<'a> {
             //
             // If we're close to not fitting, early stop the shard to ensure we don't OOM.
             let mut shape_match_found = true;
-            if self.state.global_clk % self.shape_check_frequency == 0 {
+            if self.state.global_clk.is_multiple_of(self.shape_check_frequency) {
                 // Estimate the number of events in the trace.
                 let event_counts = estimate_mips_event_counts(
                     (self.state.clk / 5) as u64,
@@ -2113,7 +2133,7 @@ impl<'a> Executor<'a> {
             }
         }
 
-        if !self.unconstrained && self.state.global_clk % 10_000_000 == 0 {
+        if !self.unconstrained && self.state.global_clk.is_multiple_of(10_000_000) {
             log::info!("clk = {} pc = 0x{:x?}", self.state.global_clk, self.state.pc);
         }
     }
@@ -2659,6 +2679,12 @@ mod tests {
         simple_op_code_test(Opcode::MUL, 0x00000001, 0xffffffff, 0xffffffff);
         simple_op_code_test(Opcode::MUL, 0xffffffff, 0xffffffff, 0x00000001);
         simple_op_code_test(Opcode::MUL, 0xffffffff, 0x00000001, 0xffffffff);
+        simple_op_code_test(Opcode::MODU, 0x00000001, 0xffffffff, 0xfffffffe);
+        simple_op_code_test(Opcode::MODU, 0x00000001, 0x00000102, 0x00000101);
+        simple_op_code_test(Opcode::MODU, 0x00000100, 0x00000100, 0x00000101);
+        simple_op_code_test(Opcode::MOD, 0xffffffff, 0xffffffff, 0xfffffffe);
+        simple_op_code_test(Opcode::MOD, 0x00000001, 0x00000102, 0x00000101);
+        simple_op_code_test(Opcode::MOD, 0x00000100, 0x00000100, 0x00000101);
     }
 
     #[test]

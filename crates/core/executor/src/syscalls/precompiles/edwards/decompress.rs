@@ -33,7 +33,7 @@ impl<E: EdwardsParameters> Syscall for EdwardsDecompressSyscall<E> {
     ) -> Option<u32> {
         let start_clk = rt.clk;
         let slice_ptr = arg1;
-        assert!(slice_ptr % 4 == 0, "Pointer must be 4-byte aligned.");
+        assert!(slice_ptr.is_multiple_of(4), "Pointer must be 4-byte aligned.");
         assert!(sign <= 1, "Sign bit must be 0 or 1.");
 
         let (y_memory_records_vec, y_vec) =
@@ -76,15 +76,8 @@ impl<E: EdwardsParameters> Syscall for EdwardsDecompressSyscall<E> {
             y_memory_records,
             local_mem_access: rt.postprocess(),
         };
-        let syscall_event = rt.rt.syscall_event(
-            start_clk,
-            None,
-            None,
-            rt.next_pc,
-            syscall_code.syscall_id(),
-            arg1,
-            sign,
-        );
+        let syscall_event =
+            rt.rt.syscall_event(start_clk, None, rt.next_pc, syscall_code.syscall_id(), arg1, sign);
         rt.add_precompile_event(syscall_code, syscall_event, PrecompileEvent::EdDecompress(event));
         None
     }

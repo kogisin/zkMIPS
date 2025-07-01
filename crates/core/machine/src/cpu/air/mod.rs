@@ -49,10 +49,16 @@ where
         // SAFETY: The usage of `builder.if_else` requires `is_memory + is_syscall` to be boolean.
         // The correctness of `is_memory` and `is_syscall` will be checked in the opcode specific chips.
         // In these correct cases, `is_memory + is_syscall` will be always boolean.
-        let expected_shard_to_send =
-            builder.if_else(local.is_memory + local.is_syscall, local.shard, AB::Expr::ZERO);
-        let expected_clk_to_send =
-            builder.if_else(local.is_memory + local.is_syscall, clk.clone(), AB::Expr::ZERO);
+        let expected_shard_to_send = builder.if_else(
+            local.is_memory + local.is_rw_a + local.is_write_hi,
+            local.shard,
+            AB::Expr::ZERO,
+        );
+        let expected_clk_to_send = builder.if_else(
+            local.is_memory + local.is_rw_a + local.is_write_hi,
+            clk.clone(),
+            AB::Expr::ZERO,
+        );
         builder.when(local.is_real).assert_eq(local.shard_to_send, expected_shard_to_send);
         builder.when(local.is_real).assert_eq(local.clk_to_send, expected_clk_to_send);
 
@@ -66,11 +72,11 @@ where
             local.op_a_value,
             local.op_b_val(),
             local.op_c_val(),
-            local.op_hi_val(),
-            local.instruction.op_a_0,
+            local.hi_or_prev_a,
             local.op_a_immutable,
             local.is_memory,
-            local.is_syscall,
+            local.is_rw_a,
+            local.is_write_hi,
             local.is_halt,
             local.is_sequential,
             local.is_real,
@@ -88,7 +94,7 @@ where
         let not_real = AB::Expr::ONE - local.is_real;
         builder.when(not_real.clone()).assert_zero(AB::Expr::ONE - local.instruction.imm_b);
         builder.when(not_real.clone()).assert_zero(AB::Expr::ONE - local.instruction.imm_c);
-        builder.when(not_real.clone()).assert_zero(AB::Expr::ONE - local.is_syscall);
+        builder.when(not_real.clone()).assert_zero(AB::Expr::ONE - local.is_rw_a);
     }
 }
 
@@ -153,6 +159,12 @@ impl CpuChip {
 
         // Verify the public value's start pc.
         builder.when_first_row().assert_eq(public_values.start_pc, local.pc);
+
+        // Verify the relationship between initial start pc and initial next pc.
+        builder
+            .when_first_row()
+            .when_not(local.is_halt)
+            .assert_eq(local.pc + AB::Expr::from_canonical_u32(4), local.next_pc);
 
         // Verify the pc, next_pc, and next_next_pc
         builder.when_transition().when(next.is_real).assert_eq(local.next_pc, next.pc);

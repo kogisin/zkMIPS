@@ -678,6 +678,11 @@ impl<F: PrimeField32> core::hash::Hash for MipsAir<F> {
 #[cfg(test)]
 #[allow(non_snake_case)]
 pub mod tests {
+    use crate::programs::tests::other_memory_program;
+    use crate::programs::tests::{
+        fibonacci_program, hello_world_program, sha3_chain_program, simple_memory_program,
+        simple_program, ssz_withdrawals_program, unconstrained_program,
+    };
     use crate::{
         io::ZKMStdin,
         mips::MipsAir,
@@ -690,14 +695,7 @@ pub mod tests {
     use p3_koala_bear::KoalaBear;
     use strum::IntoEnumIterator;
 
-    use zkm_core_executor::programs::tests::other_memory_program;
-    use zkm_core_executor::{
-        programs::tests::{
-            fibonacci_program, hello_world_program, sha3_chain_program, simple_memory_program,
-            simple_program, ssz_withdrawals_program, unconstrained_program,
-        },
-        Instruction, MipsAirId, Opcode, Program,
-    };
+    use zkm_core_executor::{Instruction, MipsAirId, Opcode, Program};
     use zkm_stark::air::MachineAir;
     use zkm_stark::{
         koala_bear_poseidon2::KoalaBearPoseidon2, CpuProver, StarkProvingKey, StarkVerifyingKey,
@@ -864,9 +862,9 @@ pub mod tests {
     }
 
     #[test]
-    fn test_mul_prove() {
+    fn test_mul_mod_prove() {
         utils::setup_logger();
-        let mul_ops = [Opcode::MUL];
+        let mul_ops = [Opcode::MUL, Opcode::MOD, Opcode::MODU];
         let operands =
             [(1, 1), (1234, 5678), (8765, 4321), (0xffff, 0xffff - 1), (u32::MAX - 1, u32::MAX)];
         for mul_op in mul_ops.iter() {
@@ -883,9 +881,9 @@ pub mod tests {
     }
 
     #[test]
-    fn test_mult_prove() {
+    fn test_mult_div_prove() {
         utils::setup_logger();
-        let mul_ops = [Opcode::MULT, Opcode::MULTU];
+        let mul_ops = [Opcode::MULT, Opcode::MULTU, Opcode::DIV, Opcode::DIVU];
         let operands =
             [(1, 1), (1234, 5678), (8765, 4321), (0xffff, 0xffff - 1), (u32::MAX - 1, u32::MAX)];
         for mul_op in mul_ops.iter() {

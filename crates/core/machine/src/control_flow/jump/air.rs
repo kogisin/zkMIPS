@@ -4,10 +4,9 @@ use p3_air::{Air, AirBuilder};
 use p3_field::FieldAlgebra;
 use p3_matrix::Matrix;
 use zkm_core_executor::Opcode;
-use zkm_stark::{
-    air::{BaseAirBuilder, ZKMAirBuilder},
-    Word,
-};
+use zkm_stark::{air::ZKMAirBuilder, Word};
+
+use crate::air::WordAirBuilder;
 
 use crate::operations::KoalaBearWordRangeChecker;
 
@@ -55,7 +54,7 @@ where
             local.op_b_value,
             local.op_c_value,
             Word([AB::Expr::ZERO; 4]),
-            local.op_a_0,
+            AB::Expr::ZERO,
             AB::Expr::ZERO,
             AB::Expr::ZERO,
             AB::Expr::ZERO,
@@ -67,7 +66,7 @@ where
         // When op_a is set to register X0, the MIPS spec states that the jump instruction will
         // not have a return destination address (it is effectively a GOTO command).  In this case,
         // we shouldn't verify the return address.
-        builder.when(is_real.clone()).when_not(local.op_a_0).assert_eq(
+        builder.when(is_real.clone()).assert_eq(
             local.op_a_value.reduce::<AB>(),
             local.next_pc.reduce::<AB>() + AB::F::from_canonical_u32(4),
         );
@@ -84,7 +83,7 @@ where
             is_real.clone(),
         );
         // SAFETY: `is_real` is already checked to be boolean.
-        // `local.pc`, `local.next_pc` are checked to a valid word when relevant.
+        // `local.next_pc`, `local.next_next_pc` are checked to a valid word when relevant.
         // This is due to the ADD ALU table checking all inputs and outputs are valid words.
         // This is done when the `AddOperation` is invoked in the ADD ALU table.
         KoalaBearWordRangeChecker::<AB::F>::range_check(
@@ -100,10 +99,13 @@ where
             is_real.clone(),
         );
 
-        // We now constrain `next_pc`.
+        // We now constrain `next_next_pc` for J/JR/JALR.
+        builder
+            .when(local.is_jump + local.is_jumpi)
+            .assert_word_eq(local.next_next_pc, local.op_b_value);
 
-        // Verify that the new pc is calculated correctly for JAL instructions.
-        // SAFETY: `is_jal` is boolean, and zero for padding rows.
+        // Verify that the next_next_pc is calculated correctly for BAL instructions.
+        // SAFETY: `is_jumpdirect` is boolean, and zero for padding rows.
         builder.send_alu(
             AB::Expr::from_canonical_u32(Opcode::ADD as u32),
             local.next_next_pc,

@@ -4453,7 +4453,7 @@ dependencies = [
 [[package]]
 name = "p3-air"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "p3-field",
  "p3-matrix",
@@ -4462,7 +4462,7 @@ dependencies = [
 [[package]]
 name = "p3-bn254-fr"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "ff 0.13.1",
  "halo2curves",
@@ -4477,7 +4477,7 @@ dependencies = [
 [[package]]
 name = "p3-challenger"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "p3-field",
  "p3-maybe-rayon",
@@ -4490,7 +4490,7 @@ dependencies = [
 [[package]]
 name = "p3-circle"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "itertools 0.13.0",
  "p3-challenger",
@@ -4508,7 +4508,7 @@ dependencies = [
 [[package]]
 name = "p3-commit"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "itertools 0.13.0",
  "p3-challenger",
@@ -4522,7 +4522,7 @@ dependencies = [
 [[package]]
 name = "p3-dft"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "itertools 0.13.0",
  "p3-field",
@@ -4535,7 +4535,7 @@ dependencies = [
 [[package]]
 name = "p3-field"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "itertools 0.13.0",
  "num-bigint 0.4.6",
@@ -4552,7 +4552,7 @@ dependencies = [
 [[package]]
 name = "p3-fri"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "itertools 0.13.0",
  "p3-challenger",
@@ -4571,7 +4571,7 @@ dependencies = [
 [[package]]
 name = "p3-interpolation"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "p3-field",
  "p3-matrix",
@@ -4582,7 +4582,7 @@ dependencies = [
 [[package]]
 name = "p3-keccak"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "itertools 0.13.0",
  "p3-field",
@@ -4594,7 +4594,7 @@ dependencies = [
 [[package]]
 name = "p3-keccak-air"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "p3-air",
  "p3-field",
@@ -4607,7 +4607,7 @@ dependencies = [
 [[package]]
 name = "p3-koala-bear"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "p3-field",
  "p3-mds",
@@ -4621,7 +4621,7 @@ dependencies = [
 [[package]]
 name = "p3-matrix"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "itertools 0.13.0",
  "p3-field",
@@ -4636,7 +4636,7 @@ dependencies = [
 [[package]]
 name = "p3-maybe-rayon"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "rayon",
 ]
@@ -4644,7 +4644,7 @@ dependencies = [
 [[package]]
 name = "p3-mds"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "itertools 0.13.0",
  "p3-dft",
@@ -4658,7 +4658,7 @@ dependencies = [
 [[package]]
 name = "p3-merkle-tree"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "itertools 0.13.0",
  "p3-commit",
@@ -4675,7 +4675,7 @@ dependencies = [
 [[package]]
 name = "p3-mersenne-31"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "itertools 0.13.0",
  "num-bigint 0.4.6",
@@ -4694,7 +4694,7 @@ dependencies = [
 [[package]]
 name = "p3-monty-31"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "itertools 0.13.0",
  "num-bigint 0.4.6",
@@ -4716,7 +4716,7 @@ dependencies = [
 [[package]]
 name = "p3-poseidon2"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "gcd",
  "p3-field",
@@ -4729,7 +4729,7 @@ dependencies = [
 [[package]]
 name = "p3-symmetric"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "itertools 0.13.0",
  "p3-field",
@@ -4739,7 +4739,7 @@ dependencies = [
 [[package]]
 name = "p3-uni-stark"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "itertools 0.13.0",
  "p3-air",
@@ -4757,7 +4757,7 @@ dependencies = [
 [[package]]
 name = "p3-util"
 version = "0.1.0"
-source = "git+https://github.com/zkMIPS/Plonky3#93967fce8949d2275c06fd91e9f495a35418d68d"
+source = "git+https://github.com/zkMIPS/Plonky3#79f986caf008ee3ae455474f42100cb7227219f3"
 dependencies = [
  "lock_api",
  "serde",
@@ -6438,7 +6438,7 @@ dependencies = [
  "num-bigint 0.4.6",
  "rand 0.8.5",
  "rustc-hex",
- "zkm-lib 1.0.0 (git+https://github.com/zkMIPS/zkMIPS.git)",
+ "zkm-lib 1.0.0",
 ]
 
 [[package]]
@@ -6595,7 +6595,7 @@ dependencies = [
 
 [[package]]
 name = "test-artifacts"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "zkm-build",
 ]
@@ -8104,7 +8104,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-build"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "cargo_metadata",
@@ -8115,7 +8115,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-core-executor"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "bincode",
@@ -8149,7 +8149,7 @@ dependencies = [
  "typenum",
  "vec_map",
  "zkm-curves",
- "zkm-lib 1.0.0",
+ "zkm-lib 1.1.0",
  "zkm-primitives",
  "zkm-stark",
  "zkm-zkvm",
@@ -8157,7 +8157,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-core-machine"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "bincode",
  "cfg-if",
@@ -8210,7 +8210,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-curves"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "cfg-if",
  "curve25519-dalek",
@@ -8233,22 +8233,10 @@ dependencies = [
 
 [[package]]
 name = "zkm-derive"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "zkm-lib"
-version = "1.0.0"
-dependencies = [
- "bincode",
- "cfg-if",
- "elliptic-curve",
- "serde",
- "sha2",
- "zkm-primitives",
 ]
 
 [[package]]
@@ -8264,8 +8252,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "zkm-lib"
+version = "1.1.0"
+dependencies = [
+ "bincode",
+ "cfg-if",
+ "elliptic-curve",
+ "serde",
+ "sha2",
+ "zkm-primitives",
+]
+
+[[package]]
 name = "zkm-primitives"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "bincode",
  "hex",
@@ -8282,7 +8282,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-prover"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "bincode",
@@ -8321,7 +8321,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-recursion-circuit"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "ff 0.13.1",
  "hashbrown 0.14.5",
@@ -8358,7 +8358,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-recursion-compiler"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "backtrace",
  "criterion",
@@ -8383,7 +8383,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-recursion-core"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "backtrace",
  "ff 0.13.1",
@@ -8419,7 +8419,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-recursion-derive"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "quote",
  "syn 1.0.109",
@@ -8427,7 +8427,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-recursion-gnark-ffi"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "bincode",
@@ -8451,7 +8451,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-sdk"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "alloy-primitives",
  "alloy-signer",
@@ -8501,7 +8501,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-stark"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "arrayref",
  "hashbrown 0.14.5",
@@ -8543,7 +8543,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-verifier"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -8565,7 +8565,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-zkvm"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "bincode",
  "cfg-if",
@@ -8577,7 +8577,7 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "sha2",
- "zkm-lib 1.0.0",
+ "zkm-lib 1.1.0",
  "zkm-primitives",
 ]
 

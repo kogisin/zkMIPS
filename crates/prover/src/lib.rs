@@ -1043,12 +1043,14 @@ impl<C: ZKMProverComponents> ZKMProver<C> {
         let proof = prover.prove(witness, build_dir.to_path_buf());
 
         // Verify the proof.
-        prover.verify(
-            &proof,
-            &vkey_hash.as_canonical_biguint(),
-            &committed_values_digest.as_canonical_biguint(),
-            build_dir,
-        );
+        prover
+            .verify(
+                &proof,
+                &vkey_hash.as_canonical_biguint(),
+                &committed_values_digest.as_canonical_biguint(),
+                build_dir,
+            )
+            .unwrap();
 
         proof
     }
@@ -1076,12 +1078,14 @@ impl<C: ZKMProverComponents> ZKMProver<C> {
         let proof = prover.prove(witness, build_dir.to_path_buf());
 
         // Verify the proof.
-        prover.verify(
-            &proof,
-            &vkey_hash.as_canonical_biguint(),
-            &committed_values_digest.as_canonical_biguint(),
-            build_dir,
-        );
+        prover
+            .verify(
+                &proof,
+                &vkey_hash.as_canonical_biguint(),
+                &committed_values_digest.as_canonical_biguint(),
+                build_dir,
+            )
+            .unwrap();
 
         proof
     }
@@ -1191,7 +1195,7 @@ pub fn compress_program_from_input<C: ZKMProverComponents>(
     program
 }
 
-#[cfg(any(test, feature = "export-tests"))]
+#[cfg(test)]
 pub mod tests {
     use std::{
         collections::BTreeSet,

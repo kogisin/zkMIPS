@@ -1,4 +1,3 @@
-use crate::memory::MemoryReadWriteCols;
 use std::mem::size_of;
 use zkm_derive::AlignedBorrow;
 
@@ -12,5 +11,4 @@ pub struct MovcondCols<T> {
     pub a_eq_b: T,
     /// Whether c equals 0.
     pub c_eq_0: T,
-    pub op_a_access: MemoryReadWriteCols<T>,
 }

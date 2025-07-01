@@ -19,10 +19,13 @@ pub struct BranchColumns<T> {
 
     /// The target program counter.
     pub target_pc: Word<T>,
-    pub target_pc_range_checker: KoalaBearWordRangeChecker<T>,
 
     /// The next next program counter.
     pub next_next_pc: Word<T>,
+
+    /// Range check for next next program counter.
+    /// Use it instead of check on target pc since reduced next_next_pc is directly used
+    /// and target_pc equals to next_next_pc when it really works(the branch is taken).
     pub next_next_pc_range_checker: KoalaBearWordRangeChecker<T>,
 
     /// The value of the first operand.
@@ -31,9 +34,6 @@ pub struct BranchColumns<T> {
     pub op_b_value: Word<T>,
     /// The value of the third operand.
     pub op_c_value: Word<T>,
-
-    /// Whether the first operand is register 0.
-    pub op_a_0: T,
 
     /// Branch Instructions Selectors.
     pub is_beq: T,
@@ -52,19 +52,6 @@ pub struct BranchColumns<T> {
     /// > is_blez & (a_lt_0  | a_eq_0) ||
     /// > is_bgez & (a_gt_0  | a_eq_0)
     pub is_branching: T,
-
-    /// The not branching column is equal to:
-    ///
-    /// > is_beq & !a_eq_b ||
-    /// > is_bne & a_eq_b ||
-    /// > is_bltz & (a_gt_0 | a_eq_0) ||
-    /// > is_bgtz & (a_lt_0 | a_eq_0) ||
-    /// > is_blez & a_gt_0 ||
-    /// > is_bgez & a_lt_0
-    pub not_branching: T,
-
-    /// Whether a equals b.
-    pub a_eq_b: T,
 
     /// Whether a is greater than b.
     pub a_gt_b: T,

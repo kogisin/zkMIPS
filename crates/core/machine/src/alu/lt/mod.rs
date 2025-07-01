@@ -51,9 +51,6 @@ pub struct LtCols<T> {
     /// The second input operand.
     pub c: Word<T>,
 
-    /// Whether the first operand is not register 0.
-    pub op_a_not_0: T,
-
     /// Boolean flag to indicate which byte pair differs if the operands are not equal.
     pub byte_flags: [T; 4],
 
@@ -81,7 +78,7 @@ pub struct LtCols<T> {
     pub is_sign_eq: T,
     /// The comparison bytes to be looked up.
     pub comparison_bytes: [T; 2],
-    /// Boolean fags to indicate which byte differs between the perands `b_comp`, `c_comp`.
+    /// Boolean fags to indicate which byte differs between the operands `b_comp`, `c_comp`.
     pub byte_equality_check: [T; 4],
 }
 
@@ -184,7 +181,6 @@ impl LtChip {
         cols.a = Word(a.map(F::from_canonical_u8));
         cols.b = Word(b.map(F::from_canonical_u8));
         cols.c = Word(c.map(F::from_canonical_u8));
-        cols.op_a_not_0 = F::from_bool(!event.op_a_0);
 
         // If this is SLT, mask the MSB of b & c before computing cols.bits.
         let masked_b = b[3] & 0x7f;
@@ -402,13 +398,13 @@ where
         // We need to verify that the comparison bytes are set correctly. This is only relevant in
         // the case where the bytes are not equal.
 
-        // Constrain the row comparison byte values to be equal to the calciulated ones.
+        // Constrain the row comparison byte values to be equal to the calculated ones.
         let (b_comp_byte, c_comp_byte) = (local.comparison_bytes[0], local.comparison_bytes[1]);
         builder.assert_eq(b_comp_byte, b_comparison_byte);
         builder.assert_eq(c_comp_byte, c_comparison_byte);
 
         // Using the values above, we can constrain the `local.is_comp_eq` flag. We already asserted
-        // in the loop that when `local.is_comp_eq == 1` then all bytes are euqal. It is left to
+        // in the loop that when `local.is_comp_eq == 1` then all bytes are equal. It is left to
         // verify that when `local.is_comp_eq == 0` the comparison bytes are indeed not equal.
         // This is done using the inverse hint `not_eq_inv`.
         builder
@@ -450,7 +446,7 @@ where
             local.b,
             local.c,
             Word([AB::Expr::ZERO; 4]),
-            AB::Expr::ONE - local.op_a_not_0,
+            AB::Expr::ZERO,
             AB::Expr::ZERO,
             AB::Expr::ZERO,
             AB::Expr::ZERO,
@@ -477,7 +473,7 @@ mod tests {
     #[test]
     fn generate_trace() {
         let mut shard = ExecutionRecord::default();
-        shard.lt_events = vec![AluEvent::new(0, Opcode::SLT, 0, 3, 2, false)];
+        shard.lt_events = vec![AluEvent::new(0, Opcode::SLT, 0, 3, 2)];
         let chip = LtChip::default();
         let generate_trace = chip.generate_trace(&shard, &mut ExecutionRecord::default());
         let trace: RowMajorMatrix<KoalaBear> = generate_trace;
@@ -505,21 +501,21 @@ mod tests {
         const NEG_4: u32 = 0b11111111111111111111111111111100;
         shard.lt_events = vec![
             // 0 == 3 < 2
-            AluEvent::new(0, Opcode::SLT, 0, 3, 2, false),
+            AluEvent::new(0, Opcode::SLT, 0, 3, 2),
             // 1 == 2 < 3
-            AluEvent::new(0, Opcode::SLT, 1, 2, 3, false),
+            AluEvent::new(0, Opcode::SLT, 1, 2, 3),
             // 0 == 5 < -3
-            AluEvent::new(0, Opcode::SLT, 0, 5, NEG_3, false),
+            AluEvent::new(0, Opcode::SLT, 0, 5, NEG_3),
             // 1 == -3 < 5
-            AluEvent::new(0, Opcode::SLT, 1, NEG_3, 5, false),
+            AluEvent::new(0, Opcode::SLT, 1, NEG_3, 5),
             // 0 == -3 < -4
-            AluEvent::new(0, Opcode::SLT, 0, NEG_3, NEG_4, false),
+            AluEvent::new(0, Opcode::SLT, 0, NEG_3, NEG_4),
             // 1 == -4 < -3
-            AluEvent::new(0, Opcode::SLT, 1, NEG_4, NEG_3, false),
+            AluEvent::new(0, Opcode::SLT, 1, NEG_4, NEG_3),
             // 0 == 3 < 3
-            AluEvent::new(0, Opcode::SLT, 0, 3, 3, false),
+            AluEvent::new(0, Opcode::SLT, 0, 3, 3),
             // 0 == -3 < -3
-            AluEvent::new(0, Opcode::SLT, 0, NEG_3, NEG_3, false),
+            AluEvent::new(0, Opcode::SLT, 0, NEG_3, NEG_3),
         ];
 
         prove_koalabear_template(&mut shard);
@@ -532,17 +528,17 @@ mod tests {
         const LARGE: u32 = 0b11111111111111111111111111111101;
         shard.lt_events = vec![
             // 0 == 3 < 2
-            AluEvent::new(0, Opcode::SLTU, 0, 3, 2, false),
+            AluEvent::new(0, Opcode::SLTU, 0, 3, 2),
             // 1 == 2 < 3
-            AluEvent::new(0, Opcode::SLTU, 1, 2, 3, false),
+            AluEvent::new(0, Opcode::SLTU, 1, 2, 3),
             // 0 == LARGE < 5
-            AluEvent::new(0, Opcode::SLTU, 0, LARGE, 5, false),
+            AluEvent::new(0, Opcode::SLTU, 0, LARGE, 5),
             // 1 == 5 < LARGE
-            AluEvent::new(0, Opcode::SLTU, 1, 5, LARGE, false),
+            AluEvent::new(0, Opcode::SLTU, 1, 5, LARGE),
             // 0 == 0 < 0
-            AluEvent::new(0, Opcode::SLTU, 0, 0, 0, false),
+            AluEvent::new(0, Opcode::SLTU, 0, 0, 0),
             // 0 == LARGE < LARGE
-            AluEvent::new(0, Opcode::SLTU, 0, LARGE, LARGE, false),
+            AluEvent::new(0, Opcode::SLTU, 0, LARGE, LARGE),
         ];
 
         prove_koalabear_template(&mut shard);

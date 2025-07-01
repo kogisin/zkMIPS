@@ -64,7 +64,7 @@ impl<AB: EmptyMessageBuilder, M> MessageBuilder<M> for AB {
 /// A trait which contains basic methods for building an AIR.
 pub trait BaseAirBuilder: AirBuilder + MessageBuilder<AirLookup<Self::Expr>> {
     /// Returns a sub-builder whose constraints are enforced only when `condition` is not one.
-    fn when_not<I: Into<Self::Expr>>(&mut self, condition: I) -> FilteredAirBuilder<Self> {
+    fn when_not<I: Into<Self::Expr>>(&mut self, condition: I) -> FilteredAirBuilder<'_, Self> {
         self.when_ne(condition, Self::F::ONE)
     }
 
@@ -200,10 +200,10 @@ pub trait InstructionAirBuilder: BaseAirBuilder {
         b: Word<impl Into<Self::Expr>>,
         c: Word<impl Into<Self::Expr>>,
         hi: Word<impl Into<Self::Expr>>,
-        op_a_0: impl Into<Self::Expr>,
         op_a_immutable: impl Into<Self::Expr>,
         is_memory: impl Into<Self::Expr>,
-        is_syscall: impl Into<Self::Expr>,
+        is_rw_a: impl Into<Self::Expr>,
+        is_write_hi: impl Into<Self::Expr>,
         is_halt: impl Into<Self::Expr>,
         is_sequential: impl Into<Self::Expr>,
         multiplicity: impl Into<Self::Expr>,
@@ -218,10 +218,10 @@ pub trait InstructionAirBuilder: BaseAirBuilder {
             .chain(b.0.into_iter().map(Into::into))
             .chain(c.0.into_iter().map(Into::into))
             .chain(hi.0.into_iter().map(Into::into))
-            .chain(once(op_a_0.into()))
             .chain(once(op_a_immutable.into()))
             .chain(once(is_memory.into()))
-            .chain(once(is_syscall.into()))
+            .chain(once(is_rw_a.into()))
+            .chain(once(is_write_hi.into()))
             .chain(once(is_halt.into()))
             .chain(once(is_sequential.into()))
             .collect();
@@ -246,10 +246,10 @@ pub trait InstructionAirBuilder: BaseAirBuilder {
         b: Word<impl Into<Self::Expr>>,
         c: Word<impl Into<Self::Expr>>,
         hi: Word<impl Into<Self::Expr>>,
-        op_a_0: impl Into<Self::Expr>,
         op_a_immutable: impl Into<Self::Expr>,
         is_memory: impl Into<Self::Expr>,
-        is_syscall: impl Into<Self::Expr>,
+        is_rw_a: impl Into<Self::Expr>,
+        is_write_hi: impl Into<Self::Expr>,
         is_halt: impl Into<Self::Expr>,
         is_sequential: impl Into<Self::Expr>,
         multiplicity: impl Into<Self::Expr>,
@@ -264,10 +264,10 @@ pub trait InstructionAirBuilder: BaseAirBuilder {
             .chain(b.0.into_iter().map(Into::into))
             .chain(c.0.into_iter().map(Into::into))
             .chain(hi.0.into_iter().map(Into::into))
-            .chain(once(op_a_0.into()))
             .chain(once(op_a_immutable.into()))
             .chain(once(is_memory.into()))
-            .chain(once(is_syscall.into()))
+            .chain(once(is_rw_a.into()))
+            .chain(once(is_write_hi.into()))
             .chain(once(is_halt.into()))
             .chain(once(is_sequential.into()))
             .collect();

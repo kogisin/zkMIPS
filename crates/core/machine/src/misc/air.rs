@@ -1,15 +1,20 @@
 use std::borrow::Borrow;
 
+use crate::memory::MemoryCols;
 use p3_air::{Air, AirBuilder};
 use p3_field::FieldAlgebra;
 use p3_matrix::Matrix;
-use zkm_core_executor::{ByteOpcode, Opcode};
+use zkm_core_executor::{events::MemoryAccessPosition, ByteOpcode, Opcode};
+use zkm_primitives::consts::WORD_SIZE;
 use zkm_stark::{
     air::{BaseAirBuilder, ZKMAirBuilder},
     Word,
 };
 
-use crate::{air::WordAirBuilder, operations::AddDoubleOperation};
+use crate::{
+    air::{MemoryAirBuilder, WordAirBuilder},
+    operations::AddDoubleOperation,
+};
 
 use super::{columns::MiscInstrColumns, MiscInstrsChip};
 
@@ -55,6 +60,27 @@ where
         builder.assert_bool(local.is_teq);
         builder.assert_bool(is_real.clone());
 
+        let is_rw_a = local.is_maddu + local.is_msubu + local.is_ins + local.is_mne + local.is_meq;
+        builder.receive_instruction(
+            local.shard,
+            local.clk,
+            local.pc,
+            local.next_pc,
+            AB::Expr::ZERO,
+            cpu_opcode.clone(),
+            local.op_a_value,
+            local.op_b_value,
+            local.op_c_value,
+            local.prev_a_value,
+            AB::Expr::ZERO,
+            AB::Expr::ZERO,
+            AB::Expr::ONE,
+            AB::Expr::ZERO,
+            AB::Expr::ZERO,
+            AB::Expr::ONE,
+            is_rw_a,
+        );
+
         builder.receive_instruction(
             AB::Expr::ZERO,
             AB::Expr::ZERO,
@@ -65,14 +91,14 @@ where
             local.op_a_value,
             local.op_b_value,
             local.op_c_value,
-            local.op_hi_value,
-            local.op_a_0,
+            local.prev_a_value,
+            AB::Expr::ZERO,
             AB::Expr::ZERO,
             AB::Expr::ZERO,
             AB::Expr::ZERO,
             AB::Expr::ZERO,
             AB::Expr::ONE,
-            is_real,
+            local.is_wsbh + local.is_sext + local.is_teq + local.is_ext,
         );
 
         self.eval_wsbh(builder, local);
@@ -81,6 +107,9 @@ where
         self.eval_movcond(builder, local);
         self.eval_maddsub(builder, local);
         self.eval_sext(builder, local);
+
+        builder.when(local.is_ins + local.is_ext).assert_zero(local.op_c_value[2]);
+        builder.when(local.is_ins + local.is_ext).assert_zero(local.op_c_value[3]);
     }
 }
 
@@ -112,12 +141,12 @@ impl MiscInstrsChip {
             builder
                 .when(local.is_sext)
                 .when(sext_cols.is_seb)
-                .assert_eq(local.op_a_value[0], sext_cols.sig_byte);
+                .assert_eq(local.op_b_value[0], sext_cols.sig_byte);
 
             builder
                 .when(local.is_sext)
                 .when(sext_cols.is_seh)
-                .assert_eq(local.op_a_value[1], sext_cols.sig_byte);
+                .assert_eq(local.op_b_value[1], sext_cols.sig_byte);
         }
 
         // Constraints for result value:
@@ -161,6 +190,18 @@ impl MiscInstrsChip {
             is_real.clone(),
         );
 
+        for i in 0..WORD_SIZE {
+            builder.when(is_real.clone()).assert_eq(
+                maddsub_cols.src2_hi[i],
+                maddsub_cols.op_hi_access.prev_value[i] * local.is_maddu
+                    + (*maddsub_cols.op_hi_access.value())[i] * local.is_msubu,
+            );
+            builder.when(is_real.clone()).assert_eq(
+                maddsub_cols.src2_lo[i],
+                local.prev_a_value[i] * local.is_maddu + local.op_a_value[i] * local.is_msubu,
+            );
+        }
+
         AddDoubleOperation::<AB::F>::eval(
             builder,
             maddsub_cols.mul_lo,
@@ -168,6 +209,32 @@ impl MiscInstrsChip {
             maddsub_cols.src2_lo,
             maddsub_cols.src2_hi,
             maddsub_cols.add_operation,
+            is_real.clone(),
+        );
+
+        builder
+            .when(local.is_maddu)
+            .assert_word_eq(local.op_a_value, maddsub_cols.add_operation.value);
+
+        builder.when(local.is_maddu).assert_word_eq(
+            *maddsub_cols.op_hi_access.value(),
+            maddsub_cols.add_operation.value_hi,
+        );
+
+        builder
+            .when(local.is_msubu)
+            .assert_word_eq(local.prev_a_value, maddsub_cols.add_operation.value);
+
+        builder.when(local.is_msubu).assert_word_eq(
+            maddsub_cols.op_hi_access.prev_value,
+            maddsub_cols.add_operation.value_hi,
+        );
+
+        builder.eval_memory_access(
+            local.shard,
+            local.clk + AB::F::from_canonical_u32(MemoryAccessPosition::HI as u32),
+            AB::F::from_canonical_u32(33),
+            &maddsub_cols.op_hi_access,
             is_real.clone(),
         );
     }
@@ -201,7 +268,7 @@ impl MiscInstrsChip {
             builder
                 .when(local.is_meq)
                 .when_not(cond_cols.c_eq_0)
-                .assert_word_eq(local.op_a_value, cond_cols.op_a_access.prev_value);
+                .assert_word_eq(local.op_a_value, local.prev_a_value);
 
             builder
                 .when(local.is_mne)
@@ -211,7 +278,7 @@ impl MiscInstrsChip {
             builder
                 .when(local.is_mne)
                 .when(cond_cols.c_eq_0)
-                .assert_word_eq(local.op_a_value, cond_cols.op_a_access.prev_value);
+                .assert_word_eq(local.op_a_value, local.prev_a_value);
         }
     }
 
@@ -232,7 +299,7 @@ impl MiscInstrsChip {
             builder.send_alu(
                 Opcode::ROR.as_field::<AB::F>(),
                 ins_cols.ror_val,
-                ins_cols.prev_a_value,
+                local.prev_a_value,
                 Word([
                     AB::Expr::from_canonical_u32(0) + ins_cols.lsb,
                     AB::Expr::ZERO,
@@ -294,6 +361,31 @@ impl MiscInstrsChip {
             local.op_c_value.reduce::<AB>(),
             ins_cols.lsb + ins_cols.msb * AB::Expr::from_canonical_u32(32),
         );
+
+        // 32 > msb >= lsb >=0.
+        builder.send_byte(
+            ByteOpcode::U8Range.as_field::<AB::F>(),
+            AB::Expr::ZERO,
+            ins_cols.lsb,
+            ins_cols.msb,
+            local.is_ins,
+        );
+
+        builder.send_byte(
+            ByteOpcode::LTU.as_field::<AB::F>(),
+            AB::Expr::ONE,
+            ins_cols.lsb,
+            ins_cols.msb + AB::Expr::ONE,
+            local.is_ins,
+        );
+
+        builder.send_byte(
+            ByteOpcode::LTU.as_field::<AB::F>(),
+            AB::Expr::ONE,
+            ins_cols.msb,
+            AB::Expr::from_canonical_u32(32),
+            local.is_ins,
+        );
     }
 
     pub(crate) fn eval_ext<AB: ZKMAirBuilder>(
@@ -338,6 +430,23 @@ impl MiscInstrsChip {
         builder.when(local.is_ext).assert_eq(
             local.op_c_value.reduce::<AB>(),
             ext_cols.lsb + ext_cols.msbd * AB::Expr::from_canonical_u32(32),
+        );
+
+        // 0=< lsb/msbd < 32 , lsb + msbd < 32.
+        builder.send_byte(
+            ByteOpcode::U8Range.as_field::<AB::F>(),
+            AB::Expr::ZERO,
+            ext_cols.lsb,
+            ext_cols.msbd,
+            local.is_ext,
+        );
+
+        builder.send_byte(
+            ByteOpcode::LTU.as_field::<AB::F>(),
+            AB::Expr::ONE,
+            ext_cols.lsb + ext_cols.msbd,
+            AB::Expr::from_canonical_u32(32),
+            local.is_ext,
         );
     }
 
