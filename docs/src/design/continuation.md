@@ -1,6 +1,6 @@
 # Continuation
 
-zkMIPS implements an advanced continuation framework within its zkVM architecture, combining recursive proof composition with ​multi-shard execution capabilities. This design enables unbounded computational scalability with cryptographically verifiable state transitions while minimizing resource overhead. It has the following advantages:
+Ziren implements an advanced continuation framework within its zkVM architecture, combining recursive proof composition with ​multi-shard execution capabilities. This design enables unbounded computational scalability with cryptographically verifiable state transitions while minimizing resource overhead. It has the following advantages:
 - Scalability
 ​
   Shards avoid single proof size explosion for long computations.
@@ -10,7 +10,7 @@ zkMIPS implements an advanced continuation framework within its zkVM architectur
 
 - ​State Continuity
 
-  Overall [memory consistency checking](../offline_memory_consistency_checking.md) and consecutive program counter verifying ensures protocol-level execution integrity beyond individual shards.
+  Overall [memory consistency checking](../memory_checking.md) and consecutive program counter verifying ensures protocol-level execution integrity beyond individual shards.
 
 ## Session-Shard Structure
 

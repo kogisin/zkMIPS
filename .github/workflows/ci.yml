@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -34,29 +35,23 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           toolchain: nightly-2025-06-30
-          targets: x86_64-unknown-linux-gnu
-          components: clippy
       - run: curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/zkMIPS/toolchain/refs/heads/main/setup.sh | sh
       - run: source ~/.zkm-toolchain/env && cd crates/test-artifacts && cargo build && cd ../..
       - name: Install Dependencies
-        run: sudo apt install protobuf-compiler
+        run: sudo apt update && sudo apt install protobuf-compiler
       - run: cargo clippy --all-targets -- -D warnings
   test:
     name: Cargo Test
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          toolchain: nightly-2025-06-30
-          targets: x86_64-unknown-linux-gnu
-          components: clippy
-      - run: source ~/.zkm-toolchain/env
+      - run: export PATH=~/.cargo/bin:$PATH
       - run: |
+          source ~/.zkm-toolchain/env
           for pkg in zkm-core-executor zkm-curves zkm-derive zkm-primitives zkm-prover \
-              zkm-recursion-circuit zkm-recursion-compiler zkm-recursion-core \
-              zkm-recursion-gnark-ffi zkm-stark zkm-zkvm zkm-lib; do
-            cargo test -r -p $pkg
+            zkm-recursion-circuit zkm-recursion-compiler zkm-recursion-core \
+            zkm-recursion-gnark-ffi zkm-stark zkm-zkvm zkm-lib; do
+              cargo test -r -p $pkg
           done
         env:
           RUSTFLAGS: "-C target-cpu=native"

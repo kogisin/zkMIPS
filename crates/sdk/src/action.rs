@@ -40,7 +40,7 @@ impl<'a> Execute<'a> {
 
     /// Add a runtime [Hook](super::Hook) into the context.
     ///
-    /// Hooks may be invoked from within zkMIPS by writing to the specified file descriptor `fd`
+    /// Hooks may be invoked from within Ziren by writing to the specified file descriptor `fd`
     /// with [`zkm_zkvm::io::write`], returning a list of arbitrary data that may be read
     /// with successive calls to [`zkm_zkvm::io::read`].
     pub fn with_hook(
@@ -131,7 +131,7 @@ impl<'a> Prove<'a> {
         // Dump the program and stdin to files for debugging if `ZKM_DUMP` is set.
         crate::utils::zkm_dump(&pk.elf, &stdin);
 
-        prover.prove_impl(pk, stdin, proof_opts, context, kind)
+        Ok(prover.prove_impl(pk, stdin, proof_opts, context, kind, None)?.0)
     }
 
     /// Set the proof kind to the core mode. This is the default.
@@ -166,7 +166,7 @@ impl<'a> Prove<'a> {
 
     /// Add a runtime [Hook](super::Hook) into the context.
     ///
-    /// Hooks may be invoked from within zkMIPS by writing to the specified file descriptor `fd`
+    /// Hooks may be invoked from within Ziren by writing to the specified file descriptor `fd`
     /// with [`zkm_zkvm::io::write`], returning a list of arbitrary data that may be read
     /// with successive calls to [`zkm_zkvm::io::read`].
     pub fn with_hook(

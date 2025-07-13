@@ -42,7 +42,7 @@ pub enum ProverType {
 /// Options to configure proof generation.
 #[derive(Clone, Default)]
 pub struct ProofOpts {
-    /// Options to configure the zkMIPS prover.
+    /// Options to configure the Ziren prover.
     pub zkm_prover_opts: ZKMProverOpts,
     /// Optional timeout duration for proof generation.
     pub timeout: Option<Duration>,
@@ -89,7 +89,30 @@ pub trait Prover<C: ZKMProverComponents>: Send + Sync {
         stdin: ZKMStdin,
         kind: ZKMProofKind,
     ) -> Result<ZKMProofWithPublicValues> {
-        self.prove_impl(pk, stdin, ProofOpts::default(), ZKMContext::default(), kind)
+        let proof =
+            self.prove_impl(pk, stdin, ProofOpts::default(), ZKMContext::default(), kind, None)?;
+        Ok(proof.0)
+    }
+
+    /// Prove the execution of a MIPS ELF with the given inputs, according to the given proof mode.
+    /// elf_id:
+    ///    The SHA-256 hash of the ELF, without the 0x prefix.
+    ///    If this field is not none, the network prover will use it to index the cached ELF.
+    fn prove_with_cycles(
+        &self,
+        pk: &ZKMProvingKey,
+        stdin: &ZKMStdin,
+        kind: ZKMProofKind,
+        elf_id: Option<String>,
+    ) -> Result<(ZKMProofWithPublicValues, u64)> {
+        self.prove_impl(
+            pk,
+            stdin.clone(),
+            ProofOpts::default(),
+            ZKMContext::default(),
+            kind,
+            elf_id,
+        )
     }
 
     /// Prove the execution of a MIPS ELF with the given inputs, according to the given proof mode.
@@ -100,9 +123,10 @@ pub trait Prover<C: ZKMProverComponents>: Send + Sync {
         opts: ProofOpts,
         context: ZKMContext<'a>,
         kind: ZKMProofKind,
-    ) -> Result<ZKMProofWithPublicValues>;
+        elf_id: Option<String>,
+    ) -> Result<(ZKMProofWithPublicValues, u64)>;
 
-    /// Verify that an zkMIPS proof is valid given its vkey and metadata.
+    /// Verify that a Ziren proof is valid given its vkey and metadata.
     /// For Plonk proofs, verifies that the public inputs of the PlonkBn254 proof match
     /// the hash of the VK and the committed public values of the ZKMProofWithPublicValues.
     fn verify(
@@ -214,8 +238,9 @@ impl Prover<DefaultProverComponents> for ProverClient {
         opts: ProofOpts,
         context: ZKMContext<'a>,
         kind: ZKMProofKind,
-    ) -> Result<ZKMProofWithPublicValues> {
-        self.prover.prove_impl(pk, stdin, opts, context, kind)
+        elf_id: Option<String>,
+    ) -> Result<(ZKMProofWithPublicValues, u64)> {
+        self.prover.prove_impl(pk, stdin, opts, context, kind, elf_id)
     }
 
     fn verify(

@@ -35,7 +35,7 @@ STARK uses Merkle trees for polynomial commitments:
 
 ### Batch Commitment Protocol
 
-The "Mixed Matrix Commitment Scheme" (MMCS) is a generalization of a vector commitment scheme used in zkMIPS. It supports:
+The "Mixed Matrix Commitment Scheme" (MMCS) is a generalization of a vector commitment scheme used in Ziren. It supports:
 
 - Committing to matrices.
 - Opening rows.
@@ -56,7 +56,7 @@ Using Lagrange interpolation:
 - Compute polynomial coefficients.
 - Extend evaluations to the larger domain,
 
-zkMIPS implements this via Radix2DitParallel - a parallel FFT algorithm that divides butterfly network layers into two halves.
+Ziren implements this via Radix2DitParallel - a parallel FFT algorithm that divides butterfly network layers into two halves.
 
 ## Low-Degree Enforcement
 
@@ -69,7 +69,7 @@ The existence of such a low-degree \\(Q(x)\\) proves \\(C_{comb}(x)\\) vanishes 
 
 ## FRI Protocol 
 
-The Fast Reed-Solomon Interactive Oracle Proof (FRI) protocol proves the low-degree of \\(P(x)\\). zkMIPS optimizes FRI by leveraging:
+The Fast Reed-Solomon Interactive Oracle Proof (FRI) protocol proves the low-degree of \\(P(x)\\). Ziren optimizes FRI by leveraging:
 - Algebraic structure of quartic extension \\(\mathbb{F}_{p^4}\\).
 - KoalaBear prime field \\(p = 2^{31} - 2^{24} + 1\\).
 - Efficient Poseidon2 hash computation.
@@ -89,7 +89,7 @@ The Fast Reed-Solomon Interactive Oracle Proof (FRI) protocol proves the low-deg
 - ​Verification Phase:
   - Verifier checks consistency between committed values at random point \\(z\\) in initial subgroup.
 
-## Verifing 
+## Verifying 
 
 ### Verification contents
 To ensure the correctness of the folding process in a FRI-based proof system, the verifier performs checks over multiple rounds using randomly chosen points from the evaluation domain. In each round, the verifier essentially re-executes a step of the folding process and verifies that the values provided by the prover are consistent with the committed Merkle root. The detailed interaction for a single round is as follows:
@@ -111,4 +111,4 @@ Given the probabilistic nature of STARK verification, the protocol prevents brut
 - A Proof of Work (PoW) accompanying each proof, or
 - multiple verification rounds.
 
-This approach significantly increases the computational cost of malicious attempts. In zkMIPS, we employ multiple verification rounds to achieve the desired security level.
+This approach significantly increases the computational cost of malicious attempts. In Ziren, we employ multiple verification rounds to achieve the desired security level.
