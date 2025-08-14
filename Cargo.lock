@@ -1585,9 +1585,15 @@ dependencies = [
  "encode_unicode",
  "libc",
  "once_cell",
- "unicode-width",
+ "unicode-width 0.2.1",
  "windows-sys 0.59.0",
 ]
+
+[[package]]
+name = "const-default"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b396d1f76d455557e1218ec8066ae14bba60b4b36ecd55577ba979f5db7ecaa"
 
 [[package]]
 name = "const-hex"
@@ -1724,6 +1730,12 @@ dependencies = [
  "cast",
  "itertools 0.10.5",
 ]
+
+[[package]]
+name = "critical-section"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "790eea4361631c5e7d22598ecd5723ff611904e3344ce8720784c93e3d83d40b"
 
 [[package]]
 name = "crossbeam-channel"
@@ -2168,6 +2180,18 @@ dependencies = [
  "serdect",
  "subtle",
  "zeroize",
+]
+
+[[package]]
+name = "embedded-alloc"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f2de9133f68db0d4627ad69db767726c99ff8585272716708227008d3f1bddd"
+dependencies = [
+ "const-default",
+ "critical-section",
+ "linked_list_allocator",
+ "rlsf",
 ]
 
 [[package]]
@@ -3344,7 +3368,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2",
+ "socket2 0.5.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -3415,7 +3439,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2",
+ "socket2 0.5.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -3633,7 +3657,7 @@ dependencies = [
  "console",
  "number_prefix",
  "portable-atomic",
- "unicode-width",
+ "unicode-width 0.2.1",
  "web-time",
 ]
 
@@ -3672,7 +3696,7 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b58db92f96b720de98181bbbe63c831e87005ab460c1bf306eb2622b4707997f"
 dependencies = [
- "socket2",
+ "socket2 0.5.10",
  "widestring",
  "windows-sys 0.48.0",
  "winreg",
@@ -3959,6 +3983,12 @@ name = "linked-hash-map"
 version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0717cef1bc8b636c6e1c1bbdefc09e6322da8a9321966e8928ef80d20f7f770f"
+
+[[package]]
+name = "linked_list_allocator"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9afa463f5405ee81cdb9cc2baf37e08ec7e4c8209442b5d72c04cfb2cd6e6286"
 
 [[package]]
 name = "linux-raw-sys"
@@ -5692,6 +5722,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rlsf"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "222fb240c3286247ecdee6fa5341e7cdad0ffdf8e7e401d9937f2d58482a20bf"
+dependencies = [
+ "cfg-if",
+ "const-default",
+ "libc",
+ "svgbobdoc",
+]
+
+[[package]]
 name = "rrs-succinct"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6364,6 +6406,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "socket2"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "233504af464074f9d066d7b5416c5f9b894a5862a6506e306f7b816cdd6f1807"
+dependencies = [
+ "libc",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "solang-parser"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6470,7 +6522,7 @@ dependencies = [
  "num-bigint 0.4.6",
  "rand 0.8.5",
  "rustc-hex",
- "zkm-lib 1.1.1 (git+https://github.com/ProjectZKM/Ziren.git)",
+ "zkm-lib 1.1.1",
 ]
 
 [[package]]
@@ -6478,6 +6530,19 @@ name = "subtle"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
+
+[[package]]
+name = "svgbobdoc"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2c04b93fc15d79b39c63218f15e3fdffaa4c227830686e3b7c5f41244eb3e50"
+dependencies = [
+ "base64 0.13.1",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+ "unicode-width 0.1.14",
+]
 
 [[package]]
 name = "svm-rs"
@@ -6627,7 +6692,7 @@ dependencies = [
 
 [[package]]
 name = "test-artifacts"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "zkm-build",
 ]
@@ -6769,9 +6834,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.46.1"
+version = "1.47.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0cc3a2344dafbe23a245241fe8b09735b521110d30fcefbbd5feb1797ca35d17"
+checksum = "89e49afdadebb872d3145a5638b59eb0691ea23e46ca484037cfab3b76b95038"
 dependencies = [
  "backtrace",
  "bytes",
@@ -6781,9 +6846,9 @@ dependencies = [
  "pin-project-lite",
  "signal-hook-registry",
  "slab",
- "socket2",
+ "socket2 0.6.0",
  "tokio-macros",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -7232,6 +7297,12 @@ name = "unicode-ident"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a5f39404a5da50712a4c1eecf25e90dd62b613502b7e925fd4e4d19b5c96512"
+
+[[package]]
+name = "unicode-width"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dd6e30e90baa6f72411720665d41d89b9a3d039dc45b8faea1ddd07f617f6af"
 
 [[package]]
 name = "unicode-width"
@@ -8131,7 +8202,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-build"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "anyhow",
  "cargo_metadata",
@@ -8142,7 +8213,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-cli"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "anyhow",
  "cargo_metadata",
@@ -8156,7 +8227,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-core-executor"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "anyhow",
  "bincode",
@@ -8174,6 +8245,7 @@ dependencies = [
  "p3-field",
  "p3-koala-bear",
  "p3-maybe-rayon",
+ "p3-symmetric",
  "rand 0.8.5",
  "rayon-scan",
  "rrs-succinct",
@@ -8190,15 +8262,15 @@ dependencies = [
  "typenum",
  "vec_map",
  "zkm-curves",
- "zkm-lib 1.1.1",
- "zkm-primitives 1.1.1",
+ "zkm-lib 1.1.2",
+ "zkm-primitives 1.1.2",
  "zkm-stark",
  "zkm-zkvm",
 ]
 
 [[package]]
 name = "zkm-core-machine"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "bincode",
  "cfg-if",
@@ -8245,13 +8317,13 @@ dependencies = [
  "zkm-core-executor",
  "zkm-curves",
  "zkm-derive",
- "zkm-primitives 1.1.1",
+ "zkm-primitives 1.1.2",
  "zkm-stark",
 ]
 
 [[package]]
 name = "zkm-curves"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "cfg-if",
  "curve25519-dalek",
@@ -8268,28 +8340,16 @@ dependencies = [
  "serde",
  "snowbridge-amcl",
  "typenum",
- "zkm-primitives 1.1.1",
+ "zkm-primitives 1.1.2",
  "zkm-stark",
 ]
 
 [[package]]
 name = "zkm-derive"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "zkm-lib"
-version = "1.1.1"
-dependencies = [
- "bincode",
- "cfg-if",
- "elliptic-curve",
- "serde",
- "sha2",
- "zkm-primitives 1.1.1",
 ]
 
 [[package]]
@@ -8302,12 +8362,25 @@ dependencies = [
  "elliptic-curve",
  "serde",
  "sha2",
- "zkm-primitives 1.1.1 (git+https://github.com/ProjectZKM/Ziren.git)",
+ "zkm-primitives 1.1.1",
+]
+
+[[package]]
+name = "zkm-lib"
+version = "1.1.2"
+dependencies = [
+ "bincode",
+ "cfg-if",
+ "elliptic-curve",
+ "serde",
+ "sha2",
+ "zkm-primitives 1.1.2",
 ]
 
 [[package]]
 name = "zkm-primitives"
 version = "1.1.1"
+source = "git+https://github.com/ProjectZKM/Ziren.git#a8d824b42b4718f36ba087f31090a891adc01bbf"
 dependencies = [
  "bincode",
  "hex",
@@ -8324,8 +8397,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-primitives"
-version = "1.1.1"
-source = "git+https://github.com/ProjectZKM/Ziren.git#a8d824b42b4718f36ba087f31090a891adc01bbf"
+version = "1.1.2"
 dependencies = [
  "bincode",
  "hex",
@@ -8342,7 +8414,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-prover"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "anyhow",
  "bincode",
@@ -8371,7 +8443,7 @@ dependencies = [
  "tracing-subscriber 0.3.19",
  "zkm-core-executor",
  "zkm-core-machine",
- "zkm-primitives 1.1.1",
+ "zkm-primitives 1.1.2",
  "zkm-recursion-circuit",
  "zkm-recursion-compiler",
  "zkm-recursion-core",
@@ -8381,7 +8453,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-recursion-circuit"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "ff 0.13.1",
  "hashbrown 0.14.5",
@@ -8409,7 +8481,7 @@ dependencies = [
  "zkm-core-executor",
  "zkm-core-machine",
  "zkm-derive",
- "zkm-primitives 1.1.1",
+ "zkm-primitives 1.1.2",
  "zkm-recursion-compiler",
  "zkm-recursion-core",
  "zkm-recursion-gnark-ffi",
@@ -8418,7 +8490,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-recursion-compiler"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "backtrace",
  "criterion",
@@ -8435,7 +8507,7 @@ dependencies = [
  "tracing",
  "vec_map",
  "zkm-core-machine",
- "zkm-primitives 1.1.1",
+ "zkm-primitives 1.1.2",
  "zkm-recursion-core",
  "zkm-recursion-derive",
  "zkm-stark",
@@ -8443,7 +8515,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-recursion-core"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "backtrace",
  "ff 0.13.1",
@@ -8473,13 +8545,13 @@ dependencies = [
  "zkhash",
  "zkm-core-machine",
  "zkm-derive",
- "zkm-primitives 1.1.1",
+ "zkm-primitives 1.1.2",
  "zkm-stark",
 ]
 
 [[package]]
 name = "zkm-recursion-derive"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "quote",
  "syn 1.0.109",
@@ -8487,7 +8559,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-recursion-gnark-ffi"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "anyhow",
  "bincode",
@@ -8511,7 +8583,7 @@ dependencies = [
 
 [[package]]
 name = "zkm-sdk"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "alloy-primitives",
  "alloy-signer",
@@ -8554,14 +8626,14 @@ dependencies = [
  "zkm-build",
  "zkm-core-executor",
  "zkm-core-machine",
- "zkm-primitives 1.1.1",
+ "zkm-primitives 1.1.2",
  "zkm-prover",
  "zkm-stark",
 ]
 
 [[package]]
 name = "zkm-stark"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "arrayref",
  "hashbrown 0.14.5",
@@ -8597,13 +8669,13 @@ dependencies = [
  "tracing-forest",
  "tracing-subscriber 0.3.19",
  "zkm-derive",
- "zkm-primitives 1.1.1",
+ "zkm-primitives 1.1.2",
  "zkm-zkvm",
 ]
 
 [[package]]
 name = "zkm-verifier"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -8611,24 +8683,40 @@ dependencies = [
  "ark-ff 0.5.0",
  "ark-groth16",
  "ark-serialize 0.5.0",
+ "bincode",
  "hex",
+ "itertools 0.13.0",
  "lazy_static",
  "num-bigint 0.4.6",
  "num-traits",
+ "p3-commit",
+ "p3-field",
+ "p3-koala-bear",
+ "p3-symmetric",
+ "p3-util",
+ "rayon",
+ "serde",
  "sha2",
  "substrate-bn",
  "test-artifacts",
  "thiserror 2.0.12",
+ "zkm-core-executor",
+ "zkm-core-machine",
+ "zkm-primitives 1.1.2",
  "zkm-prover",
+ "zkm-recursion-core",
  "zkm-sdk",
+ "zkm-stark",
 ]
 
 [[package]]
 name = "zkm-zkvm"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "bincode",
  "cfg-if",
+ "critical-section",
+ "embedded-alloc",
  "getrandom 0.2.16",
  "lazy_static",
  "libm",
@@ -8637,8 +8725,8 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "sha2",
- "zkm-lib 1.1.1",
- "zkm-primitives 1.1.1",
+ "zkm-lib 1.1.2",
+ "zkm-primitives 1.1.2",
 ]
 
 [[package]]
