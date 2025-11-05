@@ -1,7 +1,7 @@
 //! Ported from Entrypoint for Ziren zkVM.
 #![feature(asm_experimental_arch)]
 #[cfg(all(target_os = "zkvm", feature = "embedded"))]
-use syscalls::MAX_MEMORY;
+pub use syscalls::MAX_MEMORY;
 
 pub mod syscalls;
 pub mod io {
@@ -190,7 +190,7 @@ mod zkvm {
     .section .text.main;
     .globl main;
     main:
-        li  $sp, 0xfffc000
+        li  $sp, 0x7f000000
         jal _main;
     "#
     );

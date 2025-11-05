@@ -8,10 +8,10 @@ VERSION=$1
 S3_BUCKET="zkm-toolchain"
 
 # Check for unstaged changes in the Git repository
-if ! git diff --quiet; then
-    echo "Error: There are unstaged changes. Please commit or stash them before running this script."
-    exit 1
-fi
+# if ! git diff --quiet; then
+#     echo "Error: There are unstaged changes. Please commit or stash them before running this script."
+    # exit 1
+# fi
 
 # Get the current git commit hash (shorthand)
 COMMIT_HASH=$(git rev-parse --short HEAD)
@@ -75,10 +75,6 @@ if [ $? -ne 0 ]; then
     echo "Failed to upload Trusted Setup archive to S3."
     exit 1
 fi
-
-# Copy Groth16 and Plonk vks to verifier crate
-cp ./build/groth16/groth16_vk.bin ../verifier/bn254-vk/groth16_vk.bin
-cp ./build/plonk/plonk_vk.bin ../verifier/bn254-vk/plonk_vk.bin
 
 echo "Successfully uploaded build artifacts to S3:"
 echo "- s3://$S3_BUCKET/$GROTH16_ARCHIVE"

@@ -4,13 +4,13 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use strum_macros::{EnumDiscriminants, EnumTryAs};
 use zkm_core_executor::ZKMReduceProof;
-use zkm_core_machine::io::ZKMStdin;
 use zkm_primitives::io::ZKMPublicValues;
 
 use zkm_prover::{CoreSC, Groth16Bn254Proof, InnerSC, PlonkBn254Proof};
 use zkm_stark::{MachineVerificationError, ShardProof};
 
 /// A proof generated with Ziren of a particular proof mode.
+/// Consistent with the definition in file crates/verifier/src/stark/mod.rs
 #[derive(Debug, Clone, Serialize, Deserialize, EnumDiscriminants, EnumTryAs)]
 #[strum_discriminants(derive(Default, Hash, PartialOrd, Ord))]
 #[strum_discriminants(name(ZKMProofKind))]
@@ -36,7 +36,6 @@ pub enum ZKMProof {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZKMProofWithPublicValues {
     pub proof: ZKMProof,
-    pub stdin: ZKMStdin,
     pub public_values: ZKMPublicValues,
     pub zkm_version: String,
 }
@@ -68,8 +67,8 @@ impl ZKMProofWithPublicValues {
     /// encoded proof, in a form optimized for onchain verification.
     pub fn bytes(&self) -> Vec<u8> {
         match &self.proof {
-            ZKMProof::Compressed(stark_proof) => {
-                bincode::serialize(stark_proof).expect("Invalid stark proof")
+            ZKMProof::Compressed(_) => {
+                bincode::serialize(&self.proof).expect("Invalid stark proof")
             }
             ZKMProof::Plonk(plonk_proof) => {
                 if plonk_proof.encoded_proof.is_empty() {
@@ -115,7 +114,6 @@ mod tests {
                 public_inputs: ["".to_string(), "".to_string()],
                 raw_proof: "".to_string(),
             }),
-            stdin: ZKMStdin::new(),
             public_values: ZKMPublicValues::new(),
             zkm_version: "".to_string(),
         };
@@ -132,7 +130,6 @@ mod tests {
                 public_inputs: ["".to_string(), "".to_string()],
                 raw_proof: "".to_string(),
             }),
-            stdin: ZKMStdin::new(),
             public_values: ZKMPublicValues::new(),
             zkm_version: "".to_string(),
         };
@@ -149,7 +146,6 @@ mod tests {
                 public_inputs: ["".to_string(), "".to_string()],
                 raw_proof: "".to_string(),
             }),
-            stdin: ZKMStdin::new(),
             public_values: ZKMPublicValues::new(),
             zkm_version: "".to_string(),
         };
@@ -165,7 +161,6 @@ mod tests {
                 public_inputs: ["".to_string(), "".to_string()],
                 raw_proof: "".to_string(),
             }),
-            stdin: ZKMStdin::new(),
             public_values: ZKMPublicValues::new(),
             zkm_version: "".to_string(),
         };
@@ -177,7 +172,6 @@ mod tests {
     fn test_core_proof_bytes_unimplemented() {
         let core_proof = ZKMProofWithPublicValues {
             proof: ZKMProof::Core(vec![]),
-            stdin: ZKMStdin::new(),
             public_values: ZKMPublicValues::new(),
             zkm_version: "".to_string(),
         };

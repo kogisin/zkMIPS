@@ -125,12 +125,10 @@ impl CpuChip {
                 || instruction.is_branch_instruction(),
         );
 
-        cols.is_memory = F::from_bool(
-            instruction.is_memory_load_instruction() || instruction.is_memory_store_instruction(),
-        );
-
         cols.is_rw_a = F::from_bool(instruction.is_rw_a_instruction());
-        cols.is_write_hi = F::from_bool(instruction.is_mult_div_instruction());
+        cols.is_check_memory = F::from_bool(
+            instruction.is_mult_div_instruction() || instruction.is_check_memory_instruction(),
+        );
 
         cols.op_a_value = event.a.into();
         if let Some(hi) = event.hi {
@@ -141,24 +139,18 @@ impl CpuChip {
         *cols.op_b_access.value_mut() = event.b.into();
         *cols.op_c_access.value_mut() = event.c.into();
 
-        cols.shard_to_send = if instruction.is_memory_load_instruction()
-            || instruction.is_memory_store_instruction()
-            || instruction.is_rw_a_instruction()
-            || instruction.is_mult_div_instruction()
-        {
-            cols.shard
-        } else {
-            F::ZERO
-        };
-        cols.clk_to_send = if instruction.is_memory_load_instruction()
-            || instruction.is_memory_store_instruction()
-            || instruction.is_rw_a_instruction()
-            || instruction.is_mult_div_instruction()
-        {
-            F::from_canonical_u32(event.clk)
-        } else {
-            F::ZERO
-        };
+        cols.shard_to_send =
+            if instruction.is_check_memory_instruction() || instruction.is_mult_div_instruction() {
+                cols.shard
+            } else {
+                F::ZERO
+            };
+        cols.clk_to_send =
+            if instruction.is_check_memory_instruction() || instruction.is_mult_div_instruction() {
+                F::from_canonical_u32(event.clk)
+            } else {
+                F::ZERO
+            };
 
         // Populate memory accesses for a, b, and c.
         if let Some(record) = event.a_record {
@@ -174,9 +166,14 @@ impl CpuChip {
 
         let mut is_halt = false;
         if instruction.is_syscall_instruction() {
-            let syscall_id = cols.op_a_access.prev_value[0];
-            let num_extra_cycles = cols.op_a_access.prev_value[2];
-            is_halt = syscall_id == F::from_canonical_u32(SyscallCode::HALT.syscall_id());
+            let syscall_id0 = cols.op_a_access.prev_value[0];
+            let syscall_id1 = cols.op_a_access.prev_value[1];
+            let num_extra_cycles = cols.op_a_access.prev_value[3];
+            let sys_exit_group = SyscallCode::SYS_EXT_GROUP.syscall_id();
+            is_halt = (syscall_id0 == F::from_canonical_u32(SyscallCode::HALT.syscall_id())
+                && syscall_id1 == F::ZERO)
+                || (syscall_id0 == F::from_canonical_u8(sys_exit_group as u8)
+                    && syscall_id1 == F::from_canonical_u8((sys_exit_group >> 8) as u8));
             cols.is_halt = F::from_bool(is_halt);
             cols.num_extra_cycles = num_extra_cycles;
         }

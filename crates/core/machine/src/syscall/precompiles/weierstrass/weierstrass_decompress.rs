@@ -78,14 +78,14 @@ pub struct LexicographicChoiceCols<T, P: FieldParameters + NumWords> {
 pub enum SignChoiceRule {
     /// Lease significant bit convention.
     ///
-    /// In this convention, the `sign_bit` matches the pairty of the `y` value. This is the
+    /// In this convention, the `sign_bit` matches the paкity of the `y` value. This is the
     /// convention used in the ECDSA signature scheme, for example, in the secp256k1 curve.
     LeastSignificantBit,
     /// Lexicographic convention.
     ///
     /// In this convention, the `sign_bit` corresponds to whether the `y` value is larger than its
     /// negative counterpart with respect to the embedding of ptime field elements as integers.
-    /// This onvention used in the BLS signature scheme, for example, in the BLS12-381 curve.
+    /// This convention used in the BLS signature scheme, for example, in the BLS12-381 curve.
     Lexicographic,
 }
 
@@ -357,7 +357,7 @@ where
 
         local.neg_y.eval(
             builder,
-            &[AB::Expr::ZERO].iter(),
+            &[AB::Expr::zero()].iter(),
             &local.y.multiplication.result,
             FieldOperation::Sub,
             local.is_real,
@@ -378,7 +378,7 @@ where
                 // negative square root of the y value.
                 builder
                     .when(local.is_real)
-                    .when_ne(local.y.lsb, AB::Expr::ONE - local.sign_bit)
+                    .when_ne(local.y.lsb, AB::Expr::one() - local.sign_bit)
                     .assert_all_eq(local.y.multiplication.result, y_limbs);
                 builder
                     .when(local.is_real)

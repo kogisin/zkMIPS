@@ -109,6 +109,10 @@ pub enum MipsAirId {
     Global = 44,
     /// The byte chip.
     Byte = 45,
+    /// The SysLinux chip.
+    SysLinux = 47,
+    /// The MovCondChip.
+    MovCond = 49,
 }
 
 impl MipsAirId {
@@ -128,6 +132,7 @@ impl MipsAirId {
             MipsAirId::Jump,
             MipsAirId::MemoryInstrs,
             MipsAirId::SyscallInstrs,
+            MipsAirId::MovCond,
             MipsAirId::MiscInstrs,
             MipsAirId::SyscallCore,
             MipsAirId::Global,
@@ -185,6 +190,8 @@ impl MipsAirId {
             Self::MemoryLocal => "MemoryLocal",
             Self::Global => "Global",
             Self::Byte => "Byte",
+            Self::SysLinux => "SysLinux",
+            Self::MovCond => "MovCond",
         }
     }
 }

@@ -1,3 +1,4 @@
+use std::env;
 use std::process::Command;
 
 use crate::{BuildArgs, HELPER_TARGET_SUBDIR};
@@ -23,10 +24,16 @@ pub(crate) fn create_local_command(
     // 3. Set the encoded rust flags.
     // 4. Remove the rustc configuration, otherwise in a build script it will attempt to compile the
     //    program with the toolchain of the normal build process, rather than the Ziren toolchain.
+
     command
         .current_dir(canonicalized_program_dir)
         .env("CARGO_ENCODED_RUSTFLAGS", get_rust_compiler_flags(args))
         .env("CARGO_TARGET_DIR", program_metadata.target_directory.join(HELPER_TARGET_SUBDIR))
         .args(get_program_build_args(args));
+
+    if let Some(zkm_cc) = env::var_os("ZIREN_ZKM_CC") {
+        command.env("CC", zkm_cc);
+    }
+
     command
 }

@@ -45,12 +45,11 @@ wget https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_${NB_CONS
 ## Semaphore Install
 
 ```bash
-git clone https://github.com/ProjectZKM/semaphore-gnark-11.git -b zkm2
-cd semaphore-gnark-11
+git clone https://github.com/ProjectZKM/semaphore-gnark-11.git -b zkm2 semaphore-mtb-setup
+cd semaphore-mtb-setup
 go build
-mv semaphore-mtb-setup semaphore-gnark-11
 cd ..
-cp semaphore-gnark-11/semaphore-gnark-11 ./
+cp semaphore-mtb-setup/semaphore-mtb-setup semaphore-gnark-11
 ```
 
 ## Phase 1 Setup
@@ -101,8 +100,8 @@ cp trusted-setup/Groth16Verifier.sol build/groth16/Groth16Verifier.sol
 ## Override Existing VKs
 
 ```bash
-cp build/groth16/groth16_vk.bin ../crates/verifier/bn254-vk/groth16_vk.bin
-cp build/groth16/plonk_vk.bin ../crates/verifier/bn254-vk/plonk_vk.bin
+cp build/groth16/groth16_vk.bin ../verifier/bn254-vk/
+cp build/plonk/plonk_vk.bin ../verifier/bn254-vk/
 ```
 
 ## Post Trusted Setup

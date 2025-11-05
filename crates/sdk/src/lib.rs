@@ -10,8 +10,7 @@ pub mod install;
 pub use crate::network::prover::NetworkProver;
 use cfg_if::cfg_if;
 use std::env;
-// #[cfg(feature = "cuda")]
-// pub use crate::provers::CudaProver;
+use zkm_cuda::ZKMGpuServer;
 
 pub mod network;
 pub mod proof;
@@ -35,7 +34,7 @@ pub use zkm_prover::{
 };
 
 // Re-export the utilities.
-use crate::utils::block_on;
+use crate::{provers::CudaProver, utils::block_on};
 pub use utils::setup_logger;
 
 /// A client for interacting with Ziren.
@@ -65,16 +64,16 @@ impl ProverClient {
         #[allow(unreachable_code)]
         match env::var("ZKM_PROVER").unwrap_or("local".to_string()).to_lowercase().as_str() {
             "mock" => Self { prover: Box::new(MockProver::new()) },
-            "local" => {
+            "cpu" | "local" => {
                 #[cfg(debug_assertions)]
                 eprintln!("Warning: Local prover in dev mode is not recommended. Proof generation may be slow.");
                 Self {
-                    #[cfg(not(feature = "cuda"))]
                     prover: Box::new(CpuProver::new()),
-                    #[cfg(feature = "cuda")]
-                    prover: Box::new(CudaProver::new(ZKMProver::new())),
                 }
             }
+            "cuda" => Self {
+                prover: Box::new(CudaProver::new(ZKMProver::new(), ZKMGpuServer::default()))
+            },
             "network" => {
                 cfg_if! {
                    if #[cfg(feature = "network")] {
@@ -146,9 +145,8 @@ impl ProverClient {
     ///
     /// let client = ProverClient::cuda();
     /// ```
-    #[cfg(feature = "cuda")]
     pub fn cuda() -> Self {
-        Self { prover: Box::new(CudaProver::new(ZKMProver::new())) }
+        Self { prover: Box::new(CudaProver::new(ZKMProver::new(), ZKMGpuServer::default())) }
     }
 
     /// Creates a new [ProverClient] with the network prover.
@@ -330,15 +328,7 @@ impl ProverClientBuilder {
     pub fn build(self) -> ProverClient {
         match self.mode.expect("The prover mode is required") {
             ProverMode::Cpu => ProverClient::cpu(),
-            // ProverMode::Cuda => {
-            //     cfg_if! {
-            //         if #[cfg(feature = "cuda")] {
-            //             ProverClient::cuda()
-            //         } else {
-            //             panic!("cuda feature is not enabled")
-            //         }
-            //     }
-            // }
+            ProverMode::Cuda => ProverClient::cuda(),
             ProverMode::Network => {
                 cfg_if! {
                    if #[cfg(feature = "network")] {
@@ -351,7 +341,6 @@ impl ProverClientBuilder {
                 }
             }
             ProverMode::Mock => ProverClient::mock(),
-            _ => unimplemented!("other provers not supported for now"),
         }
     }
 }
@@ -404,11 +393,13 @@ impl NetworkProverBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::compute_groth16_public_values;
+    use crate::utils::committed_public_values;
     use crate::ZKMProof;
     use crate::ZKMProof::Groth16;
     use crate::{utils, ProverClient, ZKMStdin};
+    use p3_field::PrimeField;
     use zkm_primitives::io::ZKMPublicValues;
+    use zkm_prover::HashableKey;
 
     #[test]
     fn test_execute() {
@@ -533,28 +524,28 @@ mod tests {
         let client = ProverClient::cpu();
         let elf = test_artifacts::HELLO_WORLD_ELF;
         let (pk, vk) = client.setup(elf);
-
-        let string_input = b"hello world".to_vec();
-        let length = (string_input.len() as u64).to_le_bytes();
-        let guest_committed_values: Vec<u8> = length.into_iter().chain(string_input).collect();
-        let computed_public_inputs = compute_groth16_public_values(&guest_committed_values, &vk);
         let stdin = ZKMStdin::new();
 
         // Generate proof & verify.
         let proof = client.prove(&pk, stdin).groth16().run().unwrap();
         client.verify(&proof, &vk).unwrap();
 
+        let string_input = b"hello world".to_vec();
+        let guest_committed_values = bincode::serialize(&string_input).unwrap();
+        assert_eq!(proof.public_values.as_ref(), guest_committed_values);
+
         let inner_proof = match proof.proof.clone() {
             Groth16(proof) => proof,
             _ => panic!("expected a compressed proof"),
         };
+
+        let vk_hash = vk.hash_bn254().as_canonical_biguint().to_string();
+        assert_eq!(vk_hash, inner_proof.public_inputs[0], "vk hash does not match");
+
+        let committed_public_values = committed_public_values(proof.public_values.as_ref());
         assert_eq!(
-            computed_public_inputs[0], inner_proof.public_inputs[0],
-            "First public input does not match"
-        );
-        assert_eq!(
-            computed_public_inputs[1], inner_proof.public_inputs[1],
-            "Second public input does not match"
+            committed_public_values, inner_proof.public_inputs[1],
+            "committed public values does not match"
         );
     }
 

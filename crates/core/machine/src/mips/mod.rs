@@ -33,7 +33,7 @@ pub(crate) mod mips_chips {
         control_flow::{BranchChip, JumpChip},
         cpu::CpuChip,
         memory::{MemoryGlobalChip, MemoryInstructionsChip},
-        misc::MiscInstrsChip,
+        misc::{MiscInstrsChip, MovCondChip},
         program::ProgramChip,
         syscall::{
             chip::SyscallChip,
@@ -42,6 +42,7 @@ pub(crate) mod mips_chips {
                 edwards::{EdAddAssignChip, EdDecompressChip},
                 keccak_sponge::KeccakSpongeChip,
                 sha256::{ShaCompressChip, ShaExtendChip},
+                sys_linux::SysLinuxChip,
                 u256x2048_mul::U256x2048MulChip,
                 uint256::Uint256MulChip,
                 weierstrass::{
@@ -65,8 +66,6 @@ pub const MAX_LOG_NUMBER_OF_SHARDS: usize = 16;
 
 /// The maximum number of shards in core.
 pub const MAX_NUMBER_OF_SHARDS: usize = 1 << MAX_LOG_NUMBER_OF_SHARDS;
-
-const KECCAK_ROWS_PER_BLOCK: usize = 24;
 
 /// An AIR for encoding MIPS execution.
 ///
@@ -104,6 +103,8 @@ pub enum MipsAir<F: PrimeField32> {
     Jump(JumpChip),
     /// An AIR for MIPS memory instructions.
     MemoryInstrs(MemoryInstructionsChip),
+    /// An AIR for MIPS mov condition instructions.
+    MovCond(MovCondChip),
     /// An AIR for MIPS misc instructions.
     MiscInstrs(MiscInstrsChip),
     /// An AIR for MIPS syscall instructions.
@@ -170,6 +171,8 @@ pub enum MipsAir<F: PrimeField32> {
     Bn254Fp2Mul(Fp2MulAssignChip<Bn254BaseField>),
     /// A precompile for BN-254 fp2 addition/subtraction.
     Bn254Fp2AddSub(Fp2AddSubAssignChip<Bn254BaseField>),
+    /// A precompile for Linux Syscall.
+    SysLinux(SysLinuxChip),
 }
 
 impl<F: PrimeField32> MipsAir<F> {
@@ -425,6 +428,14 @@ impl<F: PrimeField32> MipsAir<F> {
         costs.insert(byte.name(), byte.cost());
         chips.push(byte);
 
+        let sys_linux = Chip::new(MipsAir::SysLinux(SysLinuxChip::default()));
+        costs.insert(sys_linux.name(), sys_linux.cost());
+        chips.push(sys_linux);
+
+        let movcond_instrs = Chip::new(MipsAir::MovCond(MovCondChip::default()));
+        costs.insert(movcond_instrs.name(), movcond_instrs.cost());
+        chips.push(movcond_instrs);
+
         (chips, costs)
     }
 
@@ -439,6 +450,7 @@ impl<F: PrimeField32> MipsAir<F> {
             (MipsAirId::Cpu, record.cpu_events.len()),
             (MipsAirId::Branch, record.branch_events.len()),
             (MipsAirId::Jump, record.jump_events.len()),
+            (MipsAirId::MovCond, record.movcond_events.len()),
             (MipsAirId::MiscInstrs, record.misc_events.len()),
             (MipsAirId::MemoryInstrs, record.memory_instr_events.len()),
             (MipsAirId::SyscallInstrs, record.syscall_events.len()),
@@ -475,7 +487,11 @@ impl<F: PrimeField32> MipsAir<F> {
             .get_events(self.syscall_code())
             .filter(|events| !events.is_empty())
             .map(|events| {
-                let num_rows = events.len() * self.rows_per_event(Some(record));
+                let events_len = match self {
+                    Self::KeccakSponge(_) => self.keccak_permutation_in_record(record),
+                    _ => events.len(),
+                };
+                let num_rows = events_len * self.rows_per_event();
                 (
                     num_rows,
                     events.get_local_mem_events().into_iter().count(),
@@ -511,6 +527,7 @@ impl<F: PrimeField32> MipsAir<F> {
             MipsAir::Jump(JumpChip::default()),
             MipsAir::SyscallInstrs(SyscallInstrsChip::default()),
             MipsAir::MemoryInstrs(MemoryInstructionsChip::default()),
+            MipsAir::MovCond(MovCondChip::default()),
             MipsAir::MiscInstrs(MiscInstrsChip::default()),
             MipsAir::MemoryLocal(MemoryLocalChip::new()),
             MipsAir::Global(GlobalChip),
@@ -560,39 +577,16 @@ impl<F: PrimeField32> MipsAir<F> {
             .collect()
     }
 
-    pub(crate) fn rows_per_event(&self, record: Option<&ExecutionRecord>) -> usize {
+    pub(crate) fn rows_per_event(&self) -> usize {
         match self {
             Self::Sha256Compress(_) => 80,
             Self::Sha256Extend(_) => 48,
-            Self::KeccakSponge(_) => {
-                if let Some(record) = record {
-                    self.keccak_rows_per_event(record)
-                } else {
-                    0
-                }
-            }
+            Self::KeccakSponge(_) => 24,
             _ => 1,
         }
     }
 
-    fn keccak_rows_per_event(&self, record: &ExecutionRecord) -> usize {
-        let all = self.keccak_rows_per_record(record);
-        if all == 0 {
-            return 0;
-        }
-
-        let count = record
-            .precompile_events
-            .get_events(SyscallCode::KECCAK_SPONGE)
-            .map(|events| events.len())
-            .unwrap_or(0);
-        if count > 0 {
-            return all.div_ceil(count);
-        }
-        0
-    }
-
-    fn keccak_rows_per_record(&self, record: &ExecutionRecord) -> usize {
+    fn keccak_permutation_in_record(&self, record: &ExecutionRecord) -> usize {
         record
             .precompile_events
             .get_events(SyscallCode::KECCAK_SPONGE)
@@ -601,7 +595,7 @@ impl<F: PrimeField32> MipsAir<F> {
                     .iter()
                     .map(|(_, pre_e)| {
                         if let PrecompileEvent::KeccakSponge(event) = pre_e {
-                            event.num_blocks() * KECCAK_ROWS_PER_BLOCK
+                            event.num_blocks()
                         } else {
                             unreachable!()
                         }
@@ -638,6 +632,7 @@ impl<F: PrimeField32> MipsAir<F> {
             Self::Bls12381Fp2AddSub(_) => SyscallCode::BLS12381_FP2_ADD,
             Self::Poseidon2Permute(_) => SyscallCode::POSEIDON2_PERMUTE,
             Self::KeccakSponge(_) => SyscallCode::KECCAK_SPONGE,
+            Self::SysLinux(_) => SyscallCode::SYS_LINUX,
             Self::Add(_) => unreachable!("Invalid for core chip"),
             Self::Bitwise(_) => unreachable!("Invalid for core chip"),
             Self::DivRem(_) => unreachable!("Invalid for core chip"),
@@ -661,6 +656,7 @@ impl<F: PrimeField32> MipsAir<F> {
             Self::SyscallInstrs(_) => unreachable!("Invalid for core chip"),
             Self::MemoryInstrs(_) => unreachable!("Invalid for core chip"),
             Self::MiscInstrs(_) => unreachable!("Invalid for core chip"),
+            Self::MovCond(_) => unreachable!("Invalid for core chip"),
         }
     }
 }
@@ -690,8 +686,8 @@ impl<F: PrimeField32> core::hash::Hash for MipsAir<F> {
 pub mod tests {
     use crate::programs::tests::other_memory_program;
     use crate::programs::tests::{
-        fibonacci_program, hello_world_program, sha3_chain_program, simple_memory_program,
-        simple_program, ssz_withdrawals_program, unconstrained_program,
+        fibonacci_program, hello_world_program, max_memory_program, sha3_chain_program,
+        simple_memory_program, simple_program, ssz_withdrawals_program, unconstrained_program,
     };
     use crate::{
         io::ZKMStdin,
@@ -1068,6 +1064,13 @@ pub mod tests {
     fn test_fibonacci_prove_simple() {
         setup_logger();
         let program = fibonacci_program();
+        run_test::<CpuProver<_, _>>(program).unwrap();
+    }
+
+    #[test]
+    fn test_max_memory_prove_simple() {
+        setup_logger();
+        let program = max_memory_program();
         run_test::<CpuProver<_, _>>(program).unwrap();
     }
 

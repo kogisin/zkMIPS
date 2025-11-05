@@ -207,7 +207,6 @@ impl<F: PrimeField32> CoreShapeConfig<F> {
                             air,
                             *memory_events_per_row,
                             *allowed_log2_height,
-                            Some(record),
                         ) {
                             let mem_events_height = shape[2].1;
                             let global_events_height = shape[3].1;
@@ -241,10 +240,9 @@ impl<F: PrimeField32> CoreShapeConfig<F> {
         air: &MipsAir<F>,
         memory_events_per_row: usize,
         allowed_log2_height: usize,
-        record: Option<&ExecutionRecord>,
     ) -> Vec<[(String, usize); 4]> {
         // TODO: This is a temporary fix to the shape, concretely fix this
-        (1..=4 * air.rows_per_event(record))
+        (1..=4 * air.rows_per_event())
             .rev()
             .map(|rows_per_event| {
                 let num_local_mem_events =
@@ -254,7 +252,7 @@ impl<F: PrimeField32> CoreShapeConfig<F> {
                     (
                         MipsAir::<F>::SyscallPrecompile(SyscallChip::precompile()).name(),
                         ((1 << allowed_log2_height)
-                            .div_ceil(&air.rows_per_event(record))
+                            .div_ceil(&air.rows_per_event())
                             .next_power_of_two()
                             .ilog2() as usize)
                             .max(4),
@@ -270,7 +268,7 @@ impl<F: PrimeField32> CoreShapeConfig<F> {
                     (
                         MipsAir::<F>::Global(GlobalChip).name(),
                         ((2 * num_local_mem_events
-                            + (1 << allowed_log2_height).div_ceil(&air.rows_per_event(record)))
+                            + (1 << allowed_log2_height).div_ceil(&air.rows_per_event()))
                         .next_power_of_two()
                         .ilog2() as usize)
                             .max(4),
@@ -314,7 +312,7 @@ impl<F: PrimeField32> CoreShapeConfig<F> {
         let precompile_only_shapes = self.partial_precompile_shapes.iter().flat_map(
             move |(air, (mem_events_per_row, allowed_log_heights))| {
                 allowed_log_heights.iter().flat_map(move |allowed_log_height| {
-                    self.get_precompile_shapes(air, *mem_events_per_row, *allowed_log_height, None)
+                    self.get_precompile_shapes(air, *mem_events_per_row, *allowed_log_height)
                 })
             },
         );
@@ -401,7 +399,6 @@ impl<F: PrimeField32> CoreShapeConfig<F> {
                     air,
                     *mem_events_per_row,
                     *allowed_log_heights.last().unwrap(),
-                    None,
                 )
             },
         );
@@ -527,8 +524,8 @@ impl<F: PrimeField32> Default for CoreShapeConfig<F> {
 
 fn derive_cluster_from_maximal_shape(shape: &Shape<MipsAirId>) -> ShapeCluster<MipsAirId> {
     // We first define a heuristic to derive the log heights from the maximal shape.
-    let log2_gap_from_21 = 21 - shape.log2_height(&MipsAirId::Cpu).unwrap();
-    let min_log2_height_threshold = 18 - log2_gap_from_21;
+    let log2_gap_from_22 = 22 - shape.log2_height(&MipsAirId::Cpu).unwrap();
+    let min_log2_height_threshold = 18 - log2_gap_from_22;
     let log2_height_buffer = 10;
     let heuristic = |maximal_log2_height: Option<usize>, min_offset: usize| {
         if let Some(maximal_log2_height) = maximal_log2_height {
@@ -584,6 +581,9 @@ fn derive_cluster_from_maximal_shape(shape: &Shape<MipsAirId>) -> ShapeCluster<M
 
     let memory_log_height = shape.log2_height(&MipsAirId::MemoryInstrs);
     maybe_log2_heights.insert(MipsAirId::MemoryInstrs, heuristic(memory_log_height, 0));
+
+    let movcond_log_height = shape.log2_height(&MipsAirId::MovCond);
+    maybe_log2_heights.insert(MipsAirId::MovCond, heuristic(movcond_log_height, 0));
 
     let misc_log_height = shape.log2_height(&MipsAirId::MiscInstrs);
     maybe_log2_heights.insert(MipsAirId::MiscInstrs, heuristic(misc_log_height, 0));

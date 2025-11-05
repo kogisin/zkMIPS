@@ -7,7 +7,8 @@ Ziren is now available for Linux and macOS systems.
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - [Rust (Nightly)](https://www.rust-lang.org/tools/install)
 
-## Option 1: Quick Install
+## Get Started 
+### Option 1: Quick Install
 
 To install the Ziren toolchain, use the `zkmup` installer. Simply open your terminal, run the command below, and follow the on-screen instructions:
 
@@ -33,7 +34,7 @@ git clone https://github.com/ProjectZKM/Ziren
 cd Ziren && cargo test -r
 ```
 
-### Troubleshooting
+#### Troubleshooting
 
 The following error may occur:
 
@@ -46,6 +47,6 @@ cargo: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.34' not found (required
 
 Currently, our prebuilt binaries are built for Ubuntu 22.04 and macOS. Systems running older GLIBC versions may experience compatibility issues and will need to build the toolchain from source.
 
-## Option 2: Building from Source
+### Option 2: Building from Source
 
 For more details, please refer to document [toolchain](https://github.com/ProjectZKM/toolchain.git).

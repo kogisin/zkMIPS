@@ -93,12 +93,47 @@ impl Instruction {
                 | Opcode::MEQ
                 | Opcode::MNE
                 | Opcode::TEQ
+                | Opcode::MADD
+                | Opcode::MSUB
         )
     }
+
+    /// Returns if the instruction is an mov condition instruction.
+    #[must_use]
+    pub const fn is_mov_cond_instruction(&self) -> bool {
+        matches!(self.opcode, Opcode::MEQ | Opcode::MNE)
+    }
+
     /// Returns if the instruction is a syscall instruction.
     #[must_use]
     pub fn is_syscall_instruction(&self) -> bool {
         self.opcode == Opcode::SYSCALL
+    }
+
+    #[must_use]
+    pub fn is_check_memory_instruction(&self) -> bool {
+        matches!(
+            self.opcode,
+            Opcode::SYSCALL
+                | Opcode::MADDU
+                | Opcode::MSUBU
+                | Opcode::MADD
+                | Opcode::MSUB
+                | Opcode::LH
+                | Opcode::LWL
+                | Opcode::LW
+                | Opcode::LBU
+                | Opcode::LHU
+                | Opcode::LWR
+                | Opcode::SB
+                | Opcode::SH
+                | Opcode::SWL
+                | Opcode::SW
+                | Opcode::SWR
+                | Opcode::LL
+                | Opcode::SC
+                | Opcode::LB
+        )
     }
 
     #[must_use]
@@ -109,8 +144,24 @@ impl Instruction {
                 | Opcode::INS
                 | Opcode::MADDU
                 | Opcode::MSUBU
+                | Opcode::MADD
+                | Opcode::MSUB
                 | Opcode::MEQ
                 | Opcode::MNE
+                | Opcode::LH
+                | Opcode::LWL
+                | Opcode::LW
+                | Opcode::LBU
+                | Opcode::LHU
+                | Opcode::LWR
+                | Opcode::SB
+                | Opcode::SH
+                | Opcode::SWL
+                | Opcode::SW
+                | Opcode::SWR
+                | Opcode::LL
+                | Opcode::SC
+                | Opcode::LB
         )
     }
 
@@ -453,8 +504,12 @@ impl Instruction {
             (0b011100, 0b000001) => Ok(Self::new(Opcode::MADDU, 32, rt, rs, false, false)),
             // MSUBU
             (0b011100, 0b000101) => Ok(Self::new(Opcode::MSUBU, 32, rt, rs, false, false)),
+            // MADD
+            (0b011100, 0b000000) => Ok(Self::new(Opcode::MADD, 32, rt, rs, false, false)),
+            // MSUB
+            (0b011100, 0b000100) => Ok(Self::new(Opcode::MSUB, 32, rt, rs, false, false)),
             _ => {
-                log::warn!("decode: invalid opcode {opcode:#08b} {func:#08b}");
+                log::debug!("decode: invalid opcode {opcode:#08b} {func:#08b}");
                 Ok(Self::new_with_raw(Opcode::UNIMPL, 0, 0, insn, true, true, insn))
             }
         }
