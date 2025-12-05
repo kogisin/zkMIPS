@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::opcode::Opcode;
 use crate::sign_extend;
+use crate::OptionU32;
 
 /// MIPS Instruction.
 #[derive(Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
@@ -23,6 +24,39 @@ pub struct Instruction {
     pub imm_c: bool,
     // raw instruction, for some special instructions
     pub raw: Option<u32>,
+}
+
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct InstructionFfi {
+    /// The operation to execute.
+    pub opcode: Opcode,
+    /// The first operand.
+    pub op_a: u8,
+    /// The second operand.
+    pub op_b: u32,
+    /// The third operand.
+    pub op_c: u32,
+    /// Whether the second operand is an immediate value.
+    pub imm_b: bool,
+    /// Whether the third operand is an immediate value.
+    pub imm_c: bool,
+    // raw instruction, for some special instructions
+    pub raw: OptionU32,
+}
+
+impl From<Instruction> for InstructionFfi {
+    fn from(event: Instruction) -> Self {
+        Self {
+            opcode: event.opcode,
+            op_a: event.op_a,
+            op_b: event.op_b,
+            op_c: event.op_c,
+            imm_b: event.imm_b,
+            imm_c: event.imm_c,
+            raw: event.raw.into(),
+        }
+    }
 }
 
 impl Instruction {
@@ -52,6 +86,7 @@ impl Instruction {
 
     /// Returns if the instruction is an ALU instruction.
     #[must_use]
+    #[inline]
     pub const fn is_alu_instruction(&self) -> bool {
         matches!(
             self.opcode,
@@ -81,6 +116,7 @@ impl Instruction {
 
     /// Returns if the instruction is an misc instruction.
     #[must_use]
+    #[inline]
     pub const fn is_misc_instruction(&self) -> bool {
         matches!(
             self.opcode,
@@ -100,17 +136,20 @@ impl Instruction {
 
     /// Returns if the instruction is an mov condition instruction.
     #[must_use]
+    #[inline]
     pub const fn is_mov_cond_instruction(&self) -> bool {
         matches!(self.opcode, Opcode::MEQ | Opcode::MNE)
     }
 
     /// Returns if the instruction is a syscall instruction.
     #[must_use]
+    #[inline]
     pub fn is_syscall_instruction(&self) -> bool {
         self.opcode == Opcode::SYSCALL
     }
 
     #[must_use]
+    #[inline]
     pub fn is_check_memory_instruction(&self) -> bool {
         matches!(
             self.opcode,
@@ -137,6 +176,7 @@ impl Instruction {
     }
 
     #[must_use]
+    #[inline]
     pub fn is_rw_a_instruction(&self) -> bool {
         matches!(
             self.opcode,
@@ -167,6 +207,7 @@ impl Instruction {
 
     /// Returns if the instruction is a memory instruction.
     #[must_use]
+    #[inline]
     pub const fn is_memory_instruction(&self) -> bool {
         matches!(
             self.opcode,
@@ -187,6 +228,8 @@ impl Instruction {
         )
     }
 
+    #[must_use]
+    #[inline]
     pub const fn is_memory_load_instruction(&self) -> bool {
         matches!(
             self.opcode,
@@ -201,6 +244,7 @@ impl Instruction {
         )
     }
 
+    #[inline]
     pub const fn is_memory_store_instruction(&self) -> bool {
         matches!(
             self.opcode,
@@ -208,12 +252,15 @@ impl Instruction {
         )
     }
 
+    #[must_use]
+    #[inline]
     pub const fn is_memory_store_instruction_except_sc(&self) -> bool {
         matches!(self.opcode, Opcode::SB | Opcode::SH | Opcode::SW | Opcode::SWL | Opcode::SWR)
     }
 
     /// Returns if the instruction is a branch instruction.
     #[must_use]
+    #[inline]
     pub const fn is_branch_instruction(&self) -> bool {
         matches!(
             self.opcode,
@@ -221,14 +268,43 @@ impl Instruction {
         )
     }
 
+    /// Returns if the instruction is a branch instruction except bne, beq.
+    #[must_use]
+    #[inline]
+    pub const fn is_branch_cmp_instruction(&self) -> bool {
+        matches!(self.opcode, Opcode::BLTZ | Opcode::BGEZ | Opcode::BLEZ | Opcode::BGTZ)
+    }
+
+    /// Returns if the instruction is a clz or clo instruction.
+    #[must_use]
+    #[inline]
+    pub const fn is_cloclz_instruction(&self) -> bool {
+        matches!(self.opcode, Opcode::CLZ | Opcode::CLO)
+    }
+
+    /// Returns if the instruction is a maddu or msubu instruction.
+    #[must_use]
+    #[inline]
+    pub const fn is_maddsubu_instruction(&self) -> bool {
+        matches!(self.opcode, Opcode::MADDU | Opcode::MSUBU)
+    }
+
+    /// Returns if the instruction is a madd or msub instruction.
+    #[must_use]
+    #[inline]
+    pub const fn is_maddsub_instruction(&self) -> bool {
+        matches!(self.opcode, Opcode::MADD | Opcode::MSUB)
+    }
     /// Returns if the instruction is a mult/div instruction.
     #[must_use]
+    #[inline]
     pub fn is_mult_div_instruction(&self) -> bool {
         matches!(self.opcode, Opcode::MULT | Opcode::MULTU | Opcode::DIV | Opcode::DIVU)
     }
 
     /// Returns if the instruction is a jump instruction.
     #[must_use]
+    #[inline]
     pub const fn is_jump_instruction(&self) -> bool {
         matches!(self.opcode, Opcode::Jump | Opcode::Jumpi | Opcode::JumpDirect)
     }

@@ -3,10 +3,10 @@ use std::env;
 use serde::{Deserialize, Serialize};
 use sysinfo::System;
 
-const MAX_SHARD_SIZE: usize = 1 << 22;
-const RECURSION_MAX_SHARD_SIZE: usize = 1 << 22;
+const MAX_SHARD_SIZE: usize = 1 << 21;
+const RECURSION_MAX_SHARD_SIZE: usize = 1 << 21;
 const MAX_SHARD_BATCH_SIZE: usize = 8;
-const DEFAULT_TRACE_GEN_WORKERS: usize = 8;
+const DEFAULT_TRACE_GEN_WORKERS: usize = 1;
 const DEFAULT_CHECKPOINTS_CHANNEL_CAPACITY: usize = 128;
 const DEFAULT_RECORDS_AND_TRACES_CHANNEL_CAPACITY: usize = 1;
 
@@ -126,6 +126,8 @@ pub struct ZKMCoreOpts {
     pub checkpoints_channel_capacity: usize,
     /// The capacity of the channel for records and traces.
     pub records_and_traces_channel_capacity: usize,
+    /// The frequency for shape checks.
+    pub shape_check_frequency: u64,
 }
 
 impl Default for ZKMCoreOpts {
@@ -157,6 +159,8 @@ impl Default for ZKMCoreOpts {
                     |_| DEFAULT_RECORDS_AND_TRACES_CHANNEL_CAPACITY,
                     |s| s.parse::<usize>().unwrap_or(DEFAULT_RECORDS_AND_TRACES_CHANNEL_CAPACITY),
                 ),
+            shape_check_frequency: env::var("SHAPE_CHECK_FREQUENCY")
+                .map_or_else(|_| 16, |s| s.parse::<u64>().unwrap_or(16)),
             reconstruct_commitments: true,
         };
 
@@ -219,6 +223,8 @@ impl ZKMCoreOpts {
                     |_| DEFAULT_RECORDS_AND_TRACES_CHANNEL_CAPACITY,
                     |s| s.parse::<usize>().unwrap_or(DEFAULT_RECORDS_AND_TRACES_CHANNEL_CAPACITY),
                 ),
+            shape_check_frequency: env::var("SHAPE_CHECK_FREQUENCY")
+                .map_or_else(|_| 16, |s| s.parse::<u64>().unwrap_or(16)),
             reconstruct_commitments: true,
         }
     }
@@ -237,6 +243,9 @@ pub struct SplitOpts {
     pub sha_compress: usize,
     /// The threshold for memory events.
     pub memory: usize,
+    /// The threshold for combining the memory init/finalize events in to the current shard in
+    /// terms of cycles.
+    pub combine_memory_threshold: usize,
 }
 
 impl SplitOpts {
@@ -249,6 +258,7 @@ impl SplitOpts {
             sha_extend: 32 * deferred_split_threshold / 48,
             sha_compress: 32 * deferred_split_threshold / 80,
             memory: 64 * deferred_split_threshold,
+            combine_memory_threshold: 1 << 17,
         }
     }
 }

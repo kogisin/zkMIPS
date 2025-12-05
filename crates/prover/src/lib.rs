@@ -122,7 +122,7 @@ pub type CompressAir<F> = RecursionAir<F, COMPRESS_DEGREE>;
 pub type ShrinkAir<F> = RecursionAir<F, SHRINK_DEGREE>;
 pub type WrapAir<F> = RecursionAir<F, WRAP_DEGREE>;
 
-/// A end-to-end prover implementation for the Ziren zkVM.
+/// An end-to-end prover implementation for the Ziren zkVM.
 pub struct ZKMProver<C: ZKMProverComponents = DefaultProverComponents> {
     /// The machine used for proving the core step.
     pub core_prover: C::CoreProver,
@@ -609,7 +609,7 @@ impl<C: ZKMProverComponents> ZKMProver<C> {
         inputs
     }
 
-    /// Reduce shards proofs to a single shard proof using the recursion prover.
+    /// Reduce shard proofs to a single shard proof using the recursion prover.
     #[instrument(name = "compress", level = "info", skip_all)]
     pub fn compress(
         &self,
